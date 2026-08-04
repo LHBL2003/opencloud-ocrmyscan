@@ -52,16 +52,24 @@ A lightweight Docker service that watches one or more scan folders for incoming 
 
 All configuration is done via environment variables, typically set in `.env` and passed through by `compose.yaml`.
 
-### Watcher settings
+### Container timezone
 
 | Variable | Default | Description |
 |---|---|---|
 | `TZ` | `Europe/Berlin` | Container timezone. |
-| `SCAN_ROOT_HOST` | `/volume1/docker-ssd/opencloud-ocrmyscan/scan` | Host path mounted into the container as the central scan root. Must contain one subfolder per mapping target. |
+
+
+### Temporary processing folder
+
+| Variable | Default | Description |
+|---|---|---|
 | `FOLDER_PROCESS` | `/opencloud-ocrmypdf/process` | Host path used for temporary OCR output before upload. |
-| `WATCHER_SCAN_ROOT` | `/opencloud-ocrmypdf/scan` | In-container path of the primary scan root (must match the bind mount). |
-| `WATCHER_SCAN_ROOTS` | *(unset)* | Optional, semicolon/comma-separated list of **additional** in-container scan roots to watch, beyond `WATCHER_SCAN_ROOT`. |
-| `WATCHER_TMP_ROOT` | `/opencloud-ocrmypdf/process` | In-container temp/processing path (must match the bind mount). |
+
+### Watcher settings
+
+| Variable | Default | Description |
+|---|---|---|
+| `SCAN_ROOT_HOST` | `/opencloud-ocrmypdf/scan` | Host path mounted into the container as the central scan root. Must contain one subfolder per mapping target. |
 | `WATCHER_POLL_INTERVAL` | `10` | Idle loop interval in seconds. Detection itself is event-based (via `watchdog`), not polling — new files are typically picked up within seconds. |
 | `WATCHER_REPROCESS_INTERVAL_MINUTES` | `0` | If greater than `0`, the watcher re-scans all scan roots for leftover/unprocessed PDFs every N minutes, as a safety net. `0` disables this periodic re-check (only the one-time startup check runs). |
 
