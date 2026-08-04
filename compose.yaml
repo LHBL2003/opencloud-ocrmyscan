@@ -1,0 +1,41 @@
+services:
+
+  opencloud-ocrmyscan:
+    env_file:
+      - ./.env
+    build:
+      context: ./watcher
+      args:
+        TESSERACT_PACKAGES: ${TESSERACT_PACKAGES:-tesseract-ocr-deu tesseract-ocr-eng}
+    container_name: opencloud-ocrmyscan
+    restart: unless-stopped
+
+    volumes:
+      # Central scan root from the NAS
+      - ${SCAN_ROOT_HOST:-/opencloud-ocrmypdf/scan}:/opencloud-ocrmypdf/scan
+
+      # temporary processing
+      - ${FOLDER_PROCESS:-/opencloud-ocrmypdf/process}:/opencloud-ocrmypdf/process
+
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+
+      # Watcher settings
+      # These internal container paths must match the bind mounts above.
+      WATCHER_SCAN_ROOT: /opencloud-ocrmypdf/scan
+      WATCHER_TMP_ROOT: /opencloud-ocrmypdf/process
+      WATCHER_POLL_INTERVAL: ${WATCHER_POLL_INTERVAL:-10}
+
+      # OCR settings
+      OCR_LANGUAGE: ${OCR_LANGUAGE:-deu}
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-deu eng}
+      OCR_DESKEW: ${OCR_DESKEW:-true}
+      OCR_ROTATE_PAGES: ${OCR_ROTATE_PAGES:-true}
+
+      # OpenCloud WebDAV
+      WEBDAV_USER: ${WEBDAV_USER}
+      WEBDAV_PASSWORD: ${WEBDAV_PASSWORD}
+
+    command:
+      - python3
+      - /opencloud-ocrmypdf/watcher.py
