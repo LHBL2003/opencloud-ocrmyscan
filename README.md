@@ -17,7 +17,8 @@ A lightweight Docker service that watches one or more scan folders for incoming 
 ```
 .
 ├── compose.yaml          # Docker Compose service definition
-├── .env                  # Configuration (copy/edit before first run)
+├── .env.example          # Configuration template
+├── .env                  # Your local configuration (create from .env.example)
 └── watcher/
     ├── Dockerfile         # Container image (Python + ocrmypdf + tesseract)
     └── watcher.py         # The watcher/OCR/upload logic
@@ -32,7 +33,13 @@ A lightweight Docker service that watches one or more scan folders for incoming 
 
 ## Quick start
 
-1. Copy/edit the provided `.env` and adjust the values for your environment — scan root path, WebDAV credentials, and folder mappings.
+1. Create your configuration from the template and adjust the values for your environment — scan root path, WebDAV credentials, and folder mappings:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Do not commit `.env`, as it contains your WebDAV credential. If you manage the Compose stack with a Docker management tool such as Dockhand, use `.env.example` as the template and copy its variables and values into that tool's environment-variable configuration instead of creating a local `.env` file.
 2. Make sure the host paths referenced by `SCAN_ROOT_HOST` and `FOLDER_PROCESS` exist and are writable.
 3. Build and start the service:
 
@@ -50,7 +57,9 @@ A lightweight Docker service that watches one or more scan folders for incoming 
 
 ## Configuration
 
-All configuration is done via environment variables, typically set in `.env` and passed through by `compose.yaml`.
+All configuration is done through environment variables. For a local Docker Compose deployment, copy `.env.example` to `.env` and edit the copy. `compose.yaml` loads this file with `env_file`, so all variables defined in it are available to the watcher. In Docker management tools such as Dockhand, transfer the contents of `.env.example` to the stack's environment-variable configuration.
+
+`TESSERACT_PACKAGES` is an exception: it is a build argument, so rebuilding the image is required after changing it. Other changed variables take effect when Docker Compose recreates the container (for example, with `docker compose up -d`).
 
 ### Container timezone
 
@@ -80,7 +89,7 @@ See the [OCRmyPDF cookbook](https://ocrmypdf.readthedocs.io/en/latest/cookbook.h
 | Variable | Default | Description |
 |---|---|---|
 | `TESSERACT_PACKAGES` | `tesseract-ocr-deu tesseract-ocr-eng` | Build-time argument (image build only) — Tesseract language packages to install in the image. |
-| `OCR_LANGUAGE` / `OCR_LANGUAGES` | `deu eng` | OCR recognition language(s), space-separated. `OCR_LANGUAGE_*`-prefixed variables are also merged in if present. |
+| `OCR_LANGUAGE` / `OCR_LANGUAGES` | `deu eng` | OCR recognition language(s), space-separated. Prefer `OCR_LANGUAGES`; `OCR_LANGUAGE` is kept as a fallback. `OCR_LANGUAGE_*`-prefixed variables are also merged in if present. |
 | `OCR_DESKEW` | `true` | Corrects skewed pages by rotating them back into place. |
 | `OCR_ROTATE_PAGES` | `true` | Detects and corrects page orientation. |
 | `OCR_CLEAN` | `false` | Uses `unpaper` to clean pages before OCR (does not alter the final output). |
@@ -90,7 +99,7 @@ See the [OCRmyPDF cookbook](https://ocrmypdf.readthedocs.io/en/latest/cookbook.h
 | `OCR_REDO_OCR` | `false` | Re-OCRs invisible/damaged text layers. Incompatible with `OCR_DESKEW` / `OCR_CLEAN` / `OCR_REMOVE_BACKGROUND` — if any of those are enabled, `--redo-ocr` is skipped and a warning is logged. |
 | `OCR_FORCE_OCR` | `false` | Rasterizes all pages and forces OCR, discarding existing text layers. |
 
-> **Note:** the sample `.env` contains a typo, `OCR_SKIP-TEXT` (hyphen instead of underscore). This does **not** match the variable the watcher reads (`OCR_SKIP_TEXT`) and will be silently ignored — fix it to `OCR_SKIP_TEXT` if you want to use this option. Also note that `compose.yaml` currently only passes `OCR_LANGUAGE`, `OCR_LANGUAGES`, `OCR_DESKEW`, and `OCR_ROTATE_PAGES` through to the container — the other `OCR_*` variables set in `.env` (`OCR_CLEAN`, `OCR_CLEAN_FINAL`, `OCR_REMOVE_BACKGROUND`, `OCR_SKIP_TEXT`, `OCR_REDO_OCR`, `OCR_FORCE_OCR`) need to be added to the `environment:` block in `compose.yaml` if you want to use them.
+All OCR variables shown above are read directly from `.env` via `env_file`; they do not need to be repeated in the `environment:` block in `compose.yaml`.
 
 ### WebDAV credentials
 
@@ -115,7 +124,7 @@ SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/De
 - `_TARGET` is the full WebDAV URL the OCR'd file should be uploaded to. The target folder is created automatically if it doesn't exist yet.
 - `<NAME>` is just a label to group the pair together — it doesn't need to match anything else, but must be consistent between the `_SOURCE` and `_TARGET` variables.
 - You can define as many mappings as you need. Files from folders that don't match any mapping are logged and left untouched.
-- These mapping variables are not currently listed in `compose.yaml`'s `environment:` block — since the service uses `env_file: ./.env`, they are still passed through automatically as long as they're defined in `.env`.
+- The mapping variables are read from `.env` via `env_file`; they do not need to be listed individually in `compose.yaml`.
 
 ## Volumes
 
