@@ -170,3 +170,7 @@ SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/De
 ## License
 
 This project is licensed under the [MIT License](LICENSE). It may be used, modified, and distributed for private or commercial purposes. The software is provided without warranty, and the authors accept no liability for its functionality, security, or any damages resulting from its use.
+
+### Third-party licenses
+
+The MIT License applies only to this project's own code and configuration. The Docker image includes third-party components such as OCRmyPDF, Tesseract, Python, and their dependencies. These components remain subject to their respective license terms. When using, modifying, or distributing the image, you are responsible for reviewing and complying with those terms.
