@@ -8,10 +8,10 @@ The service can run on a NAS or any other Docker-capable host. It is particularl
 
 ## How it works
 
-1. A scanner (or any process) drops a PDF into a subfolder under the shared **scan root**, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/`.
+1. A scanner (or any process) drops a PDF into a subfolder under the shared **scan root**. In this example, `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` is the scan root monitored on the NAS or host. It contains subfolders for the individual scan destinations, for example for different scanners or for one scanner that supports multiple scan targets. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` is the actual scan destination where the scanner places Daniela's PDFs.
 2. The watcher container detects the new file (via `watchdog`, event-based — typically within seconds) and waits until the file size stops changing, to make sure the write is complete.
 3. It matches the file's source subfolder against the configured `SCAN_MAPPING__*` rules to determine which OpenCloud WebDAV target it belongs to.
-4. `ocrmypdf` processes the file (deskew, rotate, clean, etc., depending on configuration), embeds the recognized text, and writes a PDF/A result to a temporary processing folder. PDF/A is an archival PDF format intended to help keep documents compatible and readable for many years.
+4. `ocrmypdf` processes the file (deskew, rotate, clean, etc., depending on configuration), embeds the recognized text, and writes a PDF/A result to a temporary processing folder, for example `/volume1/docker-ssd/opencloud-ocrmypdf/process/`. PDF/A is an archival PDF format intended to help keep documents compatible and readable for many years.
 5. The processed PDF is uploaded to the matching OpenCloud WebDAV target (creating the remote folder if needed).
 6. On successful upload, the original and temporary files are deleted. On failure, the original file is preserved so nothing is lost.
 7. On startup (and optionally on a periodic interval), the watcher also scans for any pre-existing PDFs in the scan roots, so files that arrived while the container was stopped are not missed.
@@ -28,22 +28,25 @@ The service can run on a NAS or any other Docker-capable host. It is particularl
     └── watcher.py         # The watcher/OCR/upload logic
 ```
 
+
+
+## System-Requirements
+
+- Docker and Docker Compose
+- An OpenCloud instance reachable over WebDAV
+- An OpenCloud user with a valid app token (see [WebDAV credentials](#webdav-credentials) below)
+- A shared folder on your NAS or host where the scanner drops PDFs, with one subfolder per mapping target (e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` and `/volume1/docker-ssd/opencloud-ocrmypdf/scan/denis/`)
+- A writable temporary processing folder for OCR output before upload (e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/process/`)
+
 Example host directories for a Docker deployment:
 
-```
+```text
 /volume1/docker-ssd/opencloud-ocrmypdf/
 |- scan/
 |  |- daniela/            # Incoming PDFs for Daniela
 |  `- denis/              # Incoming PDFs for Denis
 `- process/               # Temporary OCR output
 ```
-
-## Requirements
-
-- Docker and Docker Compose
-- An OpenCloud instance reachable over WebDAV
-- An OpenCloud user with a valid app token (see [WebDAV credentials](#webdav-credentials) below)
-- A shared folder on your NAS or host where the scanner drops PDFs, with one subfolder per mapping target (e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` and `/volume1/docker-ssd/opencloud-ocrmypdf/scan/denis/`)
 
 ## Quick start
 
