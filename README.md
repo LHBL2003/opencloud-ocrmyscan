@@ -1,13 +1,17 @@
 # OpenCloud OCR Scanner
 
-A lightweight Docker service that watches one or more scan folders for incoming PDF files, runs them through [OCRmyPDF](https://ocrmypdf.readthedocs.io/) (with Tesseract), and uploads the OCR'd result to an [OpenCloud](https://opencloud.eu/) instance via WebDAV. Designed for NAS-based scan-to-folder workflows (e.g. a network scanner that drops PDFs into a shared folder), automatically routing files to different OpenCloud users/spaces based on the source subfolder.
+A lightweight Docker service that watches one or more scan folders for incoming PDF files, runs them through [OCRmyPDF](https://ocrmypdf.readthedocs.io/) (with Tesseract), and uploads the OCR'd result to an [OpenCloud](https://opencloud.eu/) instance via WebDAV. It automatically routes files to different OpenCloud users or spaces based on the source subfolder.
+
+OCR recognizes the text in scanned documents and embeds it as a searchable, selectable text layer in the PDF. This lets you copy text from the document and search it when accessing files through the Windows or macOS file-share app. OpenCloud's web interface and app can search document contents without an embedded text layer, but desktop file-share clients benefit from OCR embedded in the PDF.
+
+The service can run on a NAS or any other Docker-capable host. It is particularly well suited to scan-to-folder workflows, for example with an NFS- or SMB-capable scanner or multifunction device: the server-side Tesseract OCR can provide better text recognition than the device itself. The Compose setup is designed for OpenCloud, but may also work with other WebDAV-compatible services.
 
 ## How it works
 
-1. A scanner (or any process) drops a PDF into a subfolder under the shared **scan root** (e.g. `scan/Daniela/`).
+1. A scanner (or any process) drops a PDF into a subfolder under the shared **scan root**, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/`.
 2. The watcher container detects the new file (via `watchdog`, event-based — typically within seconds) and waits until the file size stops changing, to make sure the write is complete.
 3. It matches the file's source subfolder against the configured `SCAN_MAPPING__*` rules to determine which OpenCloud WebDAV target it belongs to.
-4. `ocrmypdf` processes the file (deskew, rotate, clean, etc. depending on configuration) and writes the result to a temporary processing folder.
+4. `ocrmypdf` processes the file (deskew, rotate, clean, etc., depending on configuration), embeds the recognized text, and writes a PDF/A result to a temporary processing folder. PDF/A is an archival PDF format intended to help keep documents compatible and readable for many years.
 5. The processed PDF is uploaded to the matching OpenCloud WebDAV target (creating the remote folder if needed).
 6. On successful upload, the original and temporary files are deleted. On failure, the original file is preserved so nothing is lost.
 7. On startup (and optionally on a periodic interval), the watcher also scans for any pre-existing PDFs in the scan roots, so files that arrived while the container was stopped are not missed.
@@ -24,12 +28,22 @@ A lightweight Docker service that watches one or more scan folders for incoming 
     └── watcher.py         # The watcher/OCR/upload logic
 ```
 
+Example host directories for a Docker deployment:
+
+```
+/volume1/docker-ssd/opencloud-ocrmypdf/
+|- scan/
+|  |- daniela/            # Incoming PDFs for Daniela
+|  `- denis/              # Incoming PDFs for Denis
+`- process/               # Temporary OCR output
+```
+
 ## Requirements
 
 - Docker and Docker Compose
 - An OpenCloud instance reachable over WebDAV
 - An OpenCloud user with a valid app token (see [WebDAV credentials](#webdav-credentials) below)
-- A shared folder on your NAS/host where the scanner drops PDFs, with one subfolder per mapping target (e.g. `Daniela/`, `Denis/`)
+- A shared folder on your NAS or host where the scanner drops PDFs, with one subfolder per mapping target (e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` and `/volume1/docker-ssd/opencloud-ocrmypdf/scan/denis/`)
 
 ## Quick start
 
@@ -53,7 +67,7 @@ A lightweight Docker service that watches one or more scan folders for incoming 
    docker compose logs -f opencloud-ocrmyscan
    ```
 
-5. Drop a test PDF into one of the mapped subfolders (e.g. `scan/Daniela/test.pdf`) and watch it get OCR'd and uploaded.
+5. Drop a test PDF into one of the mapped subfolders (e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/test.pdf`) and watch it get OCR'd and uploaded.
 
 ## Configuration
 
@@ -113,14 +127,14 @@ All OCR variables shown above are read directly from `.env` via `env_file`; they
 Each mapping is defined with a pair of variables sharing a name, `SCAN_MAPPING__<NAME>_SOURCE` and `SCAN_MAPPING__<NAME>_TARGET`:
 
 ```env
-SCAN_MAPPING__DANIELA_SOURCE=Daniela
+SCAN_MAPPING__DANIELA_SOURCE=daniela
 SCAN_MAPPING__DANIELA_TARGET=https://opencloud.example.com/dav/Daniela
 
-SCAN_MAPPING__DENIS_SOURCE=Denis
+SCAN_MAPPING__DENIS_SOURCE=denis
 SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/Denis
 ```
 
-- `_SOURCE` is the folder name (or relative subfolder path) under the scan root, e.g. `Daniela` for `scan/Daniela/`.
+- `_SOURCE` is the folder name (or relative subfolder path) under the scan root, e.g. `daniela` for `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/`.
 - `_TARGET` is the full WebDAV URL the OCR'd file should be uploaded to. The target folder is created automatically if it doesn't exist yet.
 - `<NAME>` is just a label to group the pair together — it doesn't need to match anything else, but must be consistent between the `_SOURCE` and `_TARGET` variables.
 - You can define as many mappings as you need. Files from folders that don't match any mapping are logged and left untouched.
