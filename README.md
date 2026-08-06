@@ -56,8 +56,8 @@ Example host directories for a Docker deployment:
    cp .env.example .env
    ```
 
-   Do not commit `.env`, as it contains your WebDAV credential. If you manage the Compose stack with a Docker management tool such as Dockhand, use `.env.example` as the template and copy its variables and values into that tool's environment-variable configuration instead of creating a local `.env` file.
-2. Make sure the host paths referenced by `SCAN_ROOT_HOST` and `FOLDER_PROCESS` exist and are writable.
+   If you manage the Compose stack with a Docker management tool such as Dockhand, use `.env.example` as the template and copy its variables and values into that tool's environment-variable configuration instead of creating a local `.env` file.
+2. Make sure the host paths referenced by `SCAN_ROOT_HOST` and `FOLDER_PROCESS` exist and are writable, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` and `/volume1/docker-ssd/opencloud-ocrmypdf/process/`.
 3. Build and start the service:
 
    ```bash
