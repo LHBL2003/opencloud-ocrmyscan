@@ -10,7 +10,7 @@ The service runs on a NAS or any other host that supports Docker. It works espec
 
 1. A scanner (or any other process) saves a PDF in a subfolder of the shared **scan root**. In this example, `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` is the monitored root folder. Its subfolders are individual scan destinations, for different scanners or for several destinations configured on one scanner. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` is the destination for Daniela's scans.
 2. The container detects the new PDF and waits until the file is fully written.
-3. The folder name is matched to the configured destination in OpenCloud.
+3. The folder name is matched to the configured destination in OpenCloud. (SCAN_MAPPING__DANIELA_SOURCE <> SCAN_MAPPING__DANIELA_TARGET)
 4. OCRmyPDF improves the scan as configured (for example, straightening or rotating pages), embeds the recognized text, and creates a PDF/A file in a temporary folder such as `/volume1/docker-ssd/opencloud-ocrmypdf/process/`. PDF/A is an archival PDF format intended to keep documents readable for many years.
 5. The processed PDF is uploaded to the matching OpenCloud folder. The folder is created automatically if it does not exist.
 6. After a successful upload, the original and temporary files are deleted. If an upload fails, the original PDF remains in the scan folder.
@@ -50,27 +50,35 @@ Example folder layout on the NAS or host:
 
 ## Quick start
 
-1. Copy the configuration template:
+1. Clone this repository to the NAS or host where Docker runs:
+
+   ```bash
+   git clone https://github.com/LHBL2003/opencloud-ocrmyscan.git
+   cd opencloud-ocrmyscan
+   ```
+
+   If you use a Docker management interface such as Dockhand, clone the repository there instead and open the stack configuration.
+2. Copy the configuration template:
 
    ```bash
    cp .env.example .env
    ```
 
    Open `.env` in a text editor and set the scan root path, processing path, WebDAV credentials, and folder mappings. If you use a Docker management interface such as Dockhand, use `.env.example` as the template for its environment variables instead.
-2. Create the folders configured as `SCAN_ROOT_HOST` and `FOLDER_PROCESS` and make sure Docker can write to them. For example: `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` and `/volume1/docker-ssd/opencloud-ocrmypdf/process/`.
-3. Build and start the service:
+3. Create the folders configured as `SCAN_ROOT_HOST` and `FOLDER_PROCESS` and make sure Docker can write to them. For example: `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` and `/volume1/docker-ssd/opencloud-ocrmypdf/process/`.
+4. Build and start the service:
 
    ```bash
    docker compose up -d --build
    ```
 
-4. Check the logs. They should confirm that the scan folder and mappings were found:
+5. Check the logs. They should confirm that the scan folder and mappings were found:
 
    ```bash
    docker compose logs -f opencloud-ocrmyscan
    ```
 
-5. Place a test PDF in a mapped folder, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/test.pdf`. It should be processed and uploaded automatically.
+6. Place a test PDF in a mapped folder, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/test.pdf`. It should be processed and uploaded automatically.
 
 ## Configuration
 
