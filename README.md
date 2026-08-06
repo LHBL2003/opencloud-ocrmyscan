@@ -57,15 +57,17 @@ Example folder layout on the NAS or host:
    cd opencloud-ocrmyscan
    ```
 
+2. Create the folders configured as `SCAN_ROOT_HOST` and `FOLDER_PROCESS` and make sure Docker can write to them. For example: `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` and `/volume1/docker-ssd/opencloud-ocrmypdf/process/`.
+
    If you use a Docker management interface such as Dockhand, clone the repository there instead and open the stack configuration.
-2. Copy the configuration template:
+3. Copy the configuration template:
 
    ```bash
    cp .env.example .env
    ```
 
    Open `.env` in a text editor and set the scan root path, processing path, WebDAV credentials, and folder mappings. If you use a Docker management interface such as Dockhand, use `.env.example` as the template for its environment variables instead.
-3. Create the folders configured as `SCAN_ROOT_HOST` and `FOLDER_PROCESS` and make sure Docker can write to them. For example: `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` and `/volume1/docker-ssd/opencloud-ocrmypdf/process/`.
+
 4. Build and start the service:
 
    ```bash
@@ -105,7 +107,7 @@ After changing `TESSERACT_PACKAGES`, rebuild the image with `docker compose up -
 |---|---|---|
 | `SCAN_ROOT_HOST` | `/opencloud-ocrmypdf/scan` | Folder on the host that contains the scan-destination subfolders. |
 | `WATCHER_POLL_INTERVAL` | `10` | Internal wait interval in seconds. New files are detected automatically, usually within seconds. |
-| `WATCHER_REPROCESS_INTERVAL_MINUTES` | `0` | Checks existing PDFs again every N minutes. Use this as a retry safety net after temporary problems; `0` disables periodic checks. |
+| `WATCHER_REPROCESS_INTERVAL_MINUTES` | `0` | Checks existing PDFs again every N minutes. Use this as a retry safety net after temporary problems; `0` disables periodic checks. A daily check (`1440`) is usually sufficient; very short intervals such as `1` minute are not recommended. |
 
 ### OCR settings (OCRmyPDF)
 
@@ -113,11 +115,11 @@ See the [OCRmyPDF cookbook](https://ocrmypdf.readthedocs.io/en/latest/cookbook.h
 
 | Variable | Default | Description |
 |---|---|---|
-| `TESSERACT_PACKAGES` | `tesseract-ocr-deu tesseract-ocr-eng` | Tesseract language packages installed in the image. Add packages when you need more recognition languages. |
-| `OCR_LANGUAGE` / `OCR_LANGUAGES` | `deu eng` | Recognition languages, separated by spaces. Normally set `OCR_LANGUAGES`. |
+| `TESSERACT_PACKAGES` | `tesseract-ocr-deu tesseract-ocr-eng` | Tesseract language packages installed in the image (Dockerfile). Add packages when you need more recognition languages. (Compose --build required) |
+| `OCR_LANGUAGES` | `deu eng` | Recognition languages, separated by spaces (for example, `deu eng`). |
 | `OCR_DESKEW` | `true` | Straightens skewed pages. |
 | `OCR_ROTATE_PAGES` | `true` | Detects and corrects page orientation. |
-| `OCR_CLEAN` | `true` | Cleans scan noise before text recognition. |
+| `OCR_CLEAN` | `true` | Cleans the page only before text recognition, helping to avoid false OCR text from background noise (for example, text showing through from the reverse side). It does **not** change the visible page in the final PDF. |
 | `OCR_CLEAN_FINAL` | `false` | Uses the cleaned page in the final PDF. Review the results carefully, as details may be removed. |
 | `OCR_REMOVE_BACKGROUND` | `false` | Attempts to remove noisy backgrounds. **Currently unreliable in this environment**; leave disabled unless you have tested it. |
 | `OCR_SKIP_TEXT` | `true` | Leaves pages that already contain text unchanged. |
@@ -131,7 +133,7 @@ OCRmyPDF creates PDF/A files by default. Leave the advanced options at their def
 | Variable | Description |
 |---|---|
 | `WEBDAV_USER` | OpenCloud username used for uploads. |
-| `WEBDAV_PASSWORD` | OpenCloud app token used for uploads. Create it in the user's app-token settings; the normal account password often does not work. |
+| `WEBDAV_PASSWORD` | OpenCloud app token used for uploads. Create it in the user's app-token settings; using a token instead of the normal account password is more secure and the account password often does not work. |
 
 ### Folder mapping: scan folder to OpenCloud folder
 
@@ -154,8 +156,8 @@ SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/De
 
 | Path in the container | Purpose | Setting for the host folder |
 |---|---|---|
-| `/opencloud-ocrmypdf/scan` | Monitored scan root, containing subfolders such as `daniela/` and `denis/`. | `SCAN_ROOT_HOST` |
-| `/opencloud-ocrmypdf/process` | Temporary OCR output before upload. | `FOLDER_PROCESS` |
+| `/opencloud-ocrmypdf/scan` | Monitored scan root, containing subfolders such as `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` and `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/denis/`. | `SCAN_ROOT_HOST` |
+| `/opencloud-ocrmypdf/process` | Temporary OCR output before upload. On the NAS / host, e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/process/` | `FOLDER_PROCESS` |
 
 ## Troubleshooting
 
@@ -163,7 +165,8 @@ SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/De
 - If the scan root is missing or was not mounted, the container writes a warning to the log. Check the path in `SCAN_ROOT_HOST` and the Docker folder mapping.
 - If an upload fails, the original PDF remains in the scan folder. It is retried on the next periodic check (when enabled) or after restarting the container.
 - For WebDAV errors, check the OpenCloud address, username, and app token in `.env`.
+- To test the WebDAV connection, use a WebDAV client on Windows or macOS with the same HTTPS address, username, and app token. Opening the WebDAV address in Google Chrome can also provide a basic login check: after entering the username and token, a blank page may be shown. This only indicates that authentication may work; use a WebDAV client to verify folder access and uploads.
 
 ## License
 
-No license specified — add one if you intend to share or distribute this project.
+This project is licensed under the [MIT License](LICENSE). It may be used, modified, and distributed for private or commercial purposes. The software is provided without warranty, and the authors accept no liability for its functionality, security, or any damages resulting from its use.

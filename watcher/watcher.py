@@ -27,18 +27,11 @@ OCR_FORCE_OCR = os.environ.get("OCR_FORCE_OCR", "false").lower() in {"1", "true"
 def parse_languages():
     languages = []
 
-    configured = os.environ.get("OCR_LANGUAGES") or os.environ.get("OCR_LANGUAGE", "deu eng")
+    configured = os.environ.get("OCR_LANGUAGES", "deu eng")
     for raw_value in re.split(r"[\s,]+", configured):
         value = raw_value.strip()
         if value and value not in languages:
             languages.append(value)
-
-    for key, value in os.environ.items():
-        if key.startswith("OCR_LANGUAGE_") and value:
-            for raw_value in re.split(r"[\s,]+", value):
-                item = raw_value.strip()
-                if item and item not in languages:
-                    languages.append(item)
 
     return languages or ["deu"]
 

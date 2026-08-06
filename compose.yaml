@@ -27,7 +27,6 @@ services:
       WATCHER_POLL_INTERVAL: ${WATCHER_POLL_INTERVAL:-10}
 
       # OCR settings
-      OCR_LANGUAGE: ${OCR_LANGUAGE:-deu}
       OCR_LANGUAGES: ${OCR_LANGUAGES:-deu eng}
       OCR_DESKEW: ${OCR_DESKEW:-true}
       OCR_ROTATE_PAGES: ${OCR_ROTATE_PAGES:-true}
