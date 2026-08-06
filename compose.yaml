@@ -1,6 +1,11 @@
 services:
 
   opencloud-ocrmyscan:
+    # Dockhand writes stack variables to this file. Keep it optional so a
+    # missing file does not prevent deployment while Dockhand creates it.
+    env_file:
+      - path: ./.env
+        required: false
     build:
       context: ./watcher
       args:
