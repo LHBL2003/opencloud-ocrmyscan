@@ -349,8 +349,10 @@ def process_file(source):
 
         if not target_url:
             log(
-                "No mapping found for:",
-                source_folder
+                "No matching mapping in configuration",
+                MAPPING_CONFIG_FILE,
+                "for scan folder:",
+                source_folder,
             )
 
             return
