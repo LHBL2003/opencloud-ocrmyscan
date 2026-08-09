@@ -1,5 +1,9 @@
 # Scan source folders and their OpenCloud WebDAV destinations.
-# "source" is a folder name (or relative folder path) under the scan root.
+# "source" is a folder name or relative folder path under the scan root,
+# for example "daniela" or "daniela/eingang".
+# "target" is the complete WebDAV URL of the OpenCloud destination folder.
 mappings:
   - source: daniela
-    target: "https://opencloud.MyDomain.com/dav/Daniela"
+    target: "https://opencloud.MyDomain.com/dav/spaces/00000000-0000-0000-0000-000000000000$00000000-0000-0000-0000-000000000000/Daniela"
+  - source: denis
+    target: "https://opencloud.MyDomain.com/dav/spaces/00000000-0000-0000-0000-000000000000$00000000-0000-0000-0000-000000000000/Denis"

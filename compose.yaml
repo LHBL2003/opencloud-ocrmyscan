@@ -21,7 +21,7 @@ services:
       - ${FOLDER_PROCESS:-/opencloud-ocrmypdf/process}:/opencloud-ocrmypdf/process
 
       # Persistent scan-to-WebDAV mappings (mappings.yaml)
-      - ${CONFIG_DIR_HOST:-/volume1/docker-ssd/opencloud-ocrmyscan/config}:/opencloud-ocrmypdf/config:ro
+      - ${CONFIG_DIR_HOST:-/opencloud-ocrmypdf/config}:/opencloud-ocrmypdf/config:ro
 
       # Use the current watcher code checked out by Dockhand. A container restart
       # applies watcher.py updates without rebuilding the image.
@@ -34,13 +34,20 @@ services:
       # These internal container paths must match the bind mounts above.
       WATCHER_SCAN_ROOT: /opencloud-ocrmypdf/scan
       WATCHER_TMP_ROOT: /opencloud-ocrmypdf/process
-      WATCHER_POLL_INTERVAL: ${WATCHER_POLL_INTERVAL:-10}
+      WATCHER_POLL_INTERVAL_SECONDS: ${WATCHER_POLL_INTERVAL_SECONDS:-10}
+      WATCHER_REPROCESS_INTERVAL_MINUTES: ${WATCHER_REPROCESS_INTERVAL_MINUTES:-0}
       MAPPING_CONFIG_FILE: /opencloud-ocrmypdf/config/mappings.yaml
 
       # OCR settings
       OCR_LANGUAGES: ${OCR_LANGUAGES:-deu eng}
       OCR_DESKEW: ${OCR_DESKEW:-true}
       OCR_ROTATE_PAGES: ${OCR_ROTATE_PAGES:-true}
+      OCR_CLEAN: ${OCR_CLEAN:-true}
+      OCR_CLEAN_FINAL: ${OCR_CLEAN_FINAL:-false}
+      OCR_REMOVE_BACKGROUND: ${OCR_REMOVE_BACKGROUND:-false}
+      OCR_SKIP_TEXT: ${OCR_SKIP_TEXT:-true}
+      OCR_REDO_OCR: ${OCR_REDO_OCR:-false}
+      OCR_FORCE_OCR: ${OCR_FORCE_OCR:-false}
 
       # OpenCloud WebDAV
       WEBDAV_USER: ${WEBDAV_USER}

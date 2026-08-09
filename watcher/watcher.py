@@ -13,14 +13,14 @@ from watchdog.events import FileSystemEventHandler
 SCAN_ROOT = os.environ.get("WATCHER_SCAN_ROOT", "/opencloud-ocrmypdf/scan")
 SCAN_ROOTS_ENV = os.environ.get("WATCHER_SCAN_ROOTS", "")
 TMP_ROOT = os.environ.get("WATCHER_TMP_ROOT", "/opencloud-ocrmypdf/process")
-POLL_INTERVAL = int(os.environ.get("WATCHER_POLL_INTERVAL", "10"))
+POLL_INTERVAL_SECONDS = int(os.environ.get("WATCHER_POLL_INTERVAL_SECONDS", "10"))
 REPROCESS_INTERVAL_MINUTES = int(os.environ.get("WATCHER_REPROCESS_INTERVAL_MINUTES", "0") or "0")
 OCR_DESKEW = os.environ.get("OCR_DESKEW", "true").lower() in {"1", "true", "yes", "on"}
 OCR_ROTATE_PAGES = os.environ.get("OCR_ROTATE_PAGES", "true").lower() in {"1", "true", "yes", "on"}
-OCR_CLEAN = os.environ.get("OCR_CLEAN", "false").lower() in {"1", "true", "yes", "on"}
+OCR_CLEAN = os.environ.get("OCR_CLEAN", "true").lower() in {"1", "true", "yes", "on"}
 OCR_CLEAN_FINAL = os.environ.get("OCR_CLEAN_FINAL", "false").lower() in {"1", "true", "yes", "on"}
 OCR_REMOVE_BACKGROUND = os.environ.get("OCR_REMOVE_BACKGROUND", "false").lower() in {"1", "true", "yes", "on"}
-OCR_SKIP_TEXT = os.environ.get("OCR_SKIP_TEXT", "false").lower() in {"1", "true", "yes", "on"}
+OCR_SKIP_TEXT = os.environ.get("OCR_SKIP_TEXT", "true").lower() in {"1", "true", "yes", "on"}
 OCR_REDO_OCR = os.environ.get("OCR_REDO_OCR", "false").lower() in {"1", "true", "yes", "on"}
 OCR_FORCE_OCR = os.environ.get("OCR_FORCE_OCR", "false").lower() in {"1", "true", "yes", "on"}
 
@@ -555,7 +555,7 @@ try:
                     process_file(pdf_path)
             continue
 
-        time.sleep(POLL_INTERVAL)
+        time.sleep(POLL_INTERVAL_SECONDS)
 
 
 except KeyboardInterrupt:

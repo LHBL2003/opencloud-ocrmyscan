@@ -115,7 +115,7 @@ Changes to the `Dockerfile`, including `TESSERACT_PACKAGES` or Python dependenci
 | Variable | Default | Description |
 |---|---|---|
 | `SCAN_ROOT_HOST` | `/opencloud-ocrmypdf/scan` | Folder on the host that contains the scan-destination subfolders. |
-| `WATCHER_POLL_INTERVAL` | `10` | Internal wait interval in seconds. New files are detected automatically, usually within seconds. |
+| `WATCHER_POLL_INTERVAL_SECONDS` | `10` | Internal wait interval in seconds. New files are detected automatically, usually within seconds. |
 | `WATCHER_REPROCESS_INTERVAL_MINUTES` | `0` | Checks existing PDFs again every N minutes. Use this as a retry safety net after temporary problems; `0` disables periodic checks. A daily check (`1440`) is usually sufficient; very short intervals such as `1` minute are not recommended. |
 
 ### OCR settings (OCRmyPDF)
