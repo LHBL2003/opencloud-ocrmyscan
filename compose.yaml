@@ -26,7 +26,6 @@ services:
 
     environment:
       TZ: ${TZ:-Europe/Berlin}
-      APP_VERSION: ${APP_VERSION:-0.1.0-beta.1}
 
       # Watcher settings
       # These internal container paths must match the bind mounts above.
