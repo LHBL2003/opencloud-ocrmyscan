@@ -2,6 +2,9 @@
 # "source" is a folder name or relative folder path under the scan root,
 # for example "daniela" or "daniela/eingang".
 # "target" is the complete WebDAV URL of the OpenCloud destination folder.
+# In OpenCloud, click the user icon (top right), then Settings > Settings, and
+# enable "Show WebDAV information in the detail view". The URL is then shown
+# in the properties/details of each folder.
 mappings:
   - source: daniela
     target: "https://opencloud.MyDomain.com/dav/spaces/00000000-0000-0000-0000-000000000000$00000000-0000-0000-0000-000000000000/Daniela"

@@ -16,13 +16,18 @@ services:
 
     volumes:
       # Central scan root from the NAS
-      - ${SCAN_ROOT_HOST:-/volume1/docker-ssd/opencloud-ocrmyscan/scan}:/opencloud-ocrmypdf/scan
+      - ${SCAN_ROOT_HOST:?Set SCAN_ROOT_HOST to the host scan folder}:/opencloud-ocrmypdf/scan
 
       # temporary processing
-      - ${FOLDER_PROCESS:-/volume1/docker-ssd/opencloud-ocrmyscan/process}:/opencloud-ocrmypdf/process
+      - ${FOLDER_PROCESS:?Set FOLDER_PROCESS to the host processing folder}:/opencloud-ocrmypdf/process
 
       # Persistent scan-to-WebDAV mappings (mappings.yaml)
-      - ${CONFIG_DIR_HOST:-/volume1/docker-ssd/opencloud-ocrmyscan/config}:/opencloud-ocrmypdf/config:ro
+      - ${CONFIG_DIR_HOST:?Set CONFIG_DIR_HOST to the host configuration folder}:/opencloud-ocrmypdf/config:ro
+
+      # Use the current code and version from the checked-out repository. After a
+      # Git sync, a container restart applies watcher.py changes without rebuilding.
+      - ./watcher/watcher.py:/opencloud-ocrmypdf/watcher.py:ro
+      - ./VERSION:/opencloud-ocrmypdf/VERSION:ro
 
     environment:
       TZ: ${TZ:-Europe/Berlin}
@@ -31,8 +36,7 @@ services:
       # These internal container paths must match the bind mounts above.
       WATCHER_SCAN_ROOT: /opencloud-ocrmypdf/scan
       WATCHER_TMP_ROOT: /opencloud-ocrmypdf/process
-      WATCHER_POLL_INTERVAL_SECONDS: ${WATCHER_POLL_INTERVAL_SECONDS:-10}
-      WATCHER_REPROCESS_INTERVAL_MINUTES: ${WATCHER_REPROCESS_INTERVAL_MINUTES:-1440}
+      WATCHER_SAFETY_RECHECK_INTERVAL_MINUTES: ${WATCHER_SAFETY_RECHECK_INTERVAL_MINUTES:-1440}
       MAPPING_CONFIG_FILE: /opencloud-ocrmypdf/config/mappings.yaml
 
       # OCR settings

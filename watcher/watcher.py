@@ -27,8 +27,7 @@ def read_app_version():
 APP_VERSION = read_app_version()
 SCAN_ROOT = os.environ.get("WATCHER_SCAN_ROOT", "/opencloud-ocrmypdf/scan")
 TMP_ROOT = os.environ.get("WATCHER_TMP_ROOT", "/opencloud-ocrmypdf/process")
-POLL_INTERVAL_SECONDS = int(os.environ.get("WATCHER_POLL_INTERVAL_SECONDS", "10"))
-REPROCESS_INTERVAL_MINUTES = int(os.environ.get("WATCHER_REPROCESS_INTERVAL_MINUTES", "1440") or "1440")
+SAFETY_RECHECK_INTERVAL_MINUTES = int(os.environ.get("WATCHER_SAFETY_RECHECK_INTERVAL_MINUTES", "1440") or "1440")
 OCR_DESKEW = os.environ.get("OCR_DESKEW", "true").lower() in {"1", "true", "yes", "on"}
 OCR_ROTATE_PAGES = os.environ.get("OCR_ROTATE_PAGES", "true").lower() in {"1", "true", "yes", "on"}
 OCR_CLEAN = os.environ.get("OCR_CLEAN", "true").lower() in {"1", "true", "yes", "on"}
@@ -540,8 +539,8 @@ def main():
 
     try:
         while True:
-            if REPROCESS_INTERVAL_MINUTES > 0:
-                time.sleep(REPROCESS_INTERVAL_MINUTES * 60)
+            if SAFETY_RECHECK_INTERVAL_MINUTES > 0:
+                time.sleep(SAFETY_RECHECK_INTERVAL_MINUTES * 60)
                 existing_pdfs = discover_existing_pdfs(SCAN_ROOTS)
                 if existing_pdfs:
                     log("Starting periodic check for existing PDFs")
@@ -549,7 +548,7 @@ def main():
                         process_file(pdf_path)
                 continue
 
-            time.sleep(POLL_INTERVAL_SECONDS)
+            time.sleep(60)
     except KeyboardInterrupt:
         observer.stop()
 

@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions are welcome while the project is in beta.
+Contributions are welcome.
 
 ## Development setup
 
@@ -26,11 +26,19 @@ python -m unittest watcher.test_watcher
 
 The same test suite can always be run in the terminal with `python -m unittest watcher.test_watcher`.
 
+Docker Desktop is required only for building or running the container; the Python unit tests above do not require Docker.
+
 Build the container when changing `watcher/Dockerfile`, `watcher/requirements.txt`, or OCR packages:
 
 ```bash
 docker build --tag opencloud-ocrmyscan:local --file watcher/Dockerfile .
 ```
+
+## Versioning and releases
+
+Maintainers store the current application version in the root [`VERSION`](VERSION) file. Releases use [Semantic Versioning](https://semver.org/): beta releases use a version such as `0.1.0-beta.1`, and the matching annotated Git tag uses a `v` prefix, for example `v0.1.0-beta.1`.
+
+Do not move or reuse a published tag. Create a new version, commit it, and create a new annotated tag for each release.
 
 ## Pull requests
 
