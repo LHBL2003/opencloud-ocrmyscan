@@ -90,6 +90,12 @@ Most installations require editing `.env` and the host-side `mappings.yaml` crea
 
 After changing `TESSERACT_PACKAGES`, rebuild the image with `docker compose up -d --build`. For other settings, run `docker compose up -d` to recreate the container.
 
+### Updating in Dockhand
+
+The Compose file mounts `watcher/watcher.py` from the Git checkout into the container. After Dockhand has updated the stack from Git, restarting or redeploying the container is enough to apply Python code changes; rebuilding the image is not required for those changes.
+
+Changes to the `Dockerfile`, including `TESSERACT_PACKAGES` or Python dependencies, still require a new image build.
+
 ### Time zone
 
 | Variable | Default | Description |

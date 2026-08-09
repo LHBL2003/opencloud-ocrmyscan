@@ -23,6 +23,10 @@ services:
       # Persistent scan-to-WebDAV mappings (mappings.yaml)
       - ${CONFIG_DIR_HOST:-/volume1/docker-ssd/opencloud-ocrmyscan/config}:/opencloud-ocrmypdf/config:ro
 
+      # Use the current watcher code checked out by Dockhand. A container restart
+      # applies watcher.py updates without rebuilding the image.
+      - ./watcher/watcher.py:/opencloud-ocrmypdf/watcher.py:ro
+
     environment:
       TZ: ${TZ:-Europe/Berlin}
 
