@@ -11,20 +11,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 
-def read_app_version():
-    """Read the packaged version, with an environment override for deployments."""
-    configured = os.environ.get("APP_VERSION")
-    if configured:
-        return configured.strip()
-
-    try:
-        with open(os.path.join(os.path.dirname(__file__), "VERSION"), encoding="utf-8") as version_file:
-            return version_file.read().strip() or "unknown"
-    except OSError:
-        return "development"
-
-
-APP_VERSION = read_app_version()
 SCAN_ROOT = os.environ.get("WATCHER_SCAN_ROOT", "/opencloud-ocrmypdf/scan")
 TMP_ROOT = os.environ.get("WATCHER_TMP_ROOT", "/opencloud-ocrmypdf/process")
 SAFETY_RECHECK_INTERVAL_MINUTES = int(os.environ.get("WATCHER_SAFETY_RECHECK_INTERVAL_MINUTES", "1440") or "1440")
@@ -115,7 +101,6 @@ WEBDAV_CONFIGURED = bool(WEBDAV_USER and WEBDAV_PASSWORD)
 
 log("--------------------------------")
 log("OpenCloud OCR Scanner started")
-log("Version:", APP_VERSION)
 log("Scan roots:", SCAN_ROOTS)
 log("Temp:", TMP_ROOT)
 if not WEBDAV_CONFIGURED:

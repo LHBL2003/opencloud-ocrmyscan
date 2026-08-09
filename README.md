@@ -96,7 +96,7 @@ The following sections describe all available settings and their defaults or req
 
 ### Updating after a Git sync
 
-`compose.yaml` mounts `watcher/watcher.py` and `VERSION` from the checked-out repository into the container. After an update from Git, restarting or redeploying the container is enough to apply Python code changes. This works with Docker Compose and Docker management interfaces such as Dockhand or Komodo.
+`compose.yaml` mounts `watcher/watcher.py` from the checked-out repository into the container. After an update from Git, restarting or redeploying the container is enough to apply Python code changes. This works with Docker Compose and Docker management interfaces such as Dockhand or Komodo.
 
 Changes to the `Dockerfile`, `requirements.txt`, or `TESSERACT_PACKAGES` still require a new image build.
 

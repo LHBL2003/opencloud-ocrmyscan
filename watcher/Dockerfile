@@ -15,6 +15,5 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 WORKDIR /opencloud-ocrmypdf
 
 COPY watcher/watcher.py /opencloud-ocrmypdf/watcher.py
-COPY VERSION /opencloud-ocrmypdf/VERSION
 
 CMD ["python3","/opencloud-ocrmypdf/watcher.py"]

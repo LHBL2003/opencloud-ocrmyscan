@@ -34,12 +34,6 @@ Build the container when changing `watcher/Dockerfile`, `watcher/requirements.tx
 docker build --tag opencloud-ocrmyscan:local --file watcher/Dockerfile .
 ```
 
-## Versioning and releases
-
-Maintainers store the current application version in the root [`VERSION`](VERSION) file. Releases use [Semantic Versioning](https://semver.org/): beta releases use a version such as `0.1.0-beta.1`, and the matching annotated Git tag uses a `v` prefix, for example `v0.1.0-beta.1`.
-
-Do not move or reuse a published tag. Create a new version, commit it, and create a new annotated tag for each release.
-
 ## Pull requests
 
 - Keep changes focused and document user-visible behavior in `README.md`.

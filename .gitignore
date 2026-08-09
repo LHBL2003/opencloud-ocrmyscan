@@ -1,4 +1,5 @@
 # Local runtime data
+__pycache__/
 process/*
 scan/*
 config/mappings.yaml
