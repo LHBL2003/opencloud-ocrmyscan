@@ -3,7 +3,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from watcher import watcher as app
+try:
+    # Running `python -m unittest watcher.test_watcher` from the repository root.
+    from watcher import watcher as app
+except ImportError:
+    # VS Code's unittest discovery can use watcher/ as its start directory.
+    import watcher as app
 
 
 class MappingConfigurationTests(unittest.TestCase):

@@ -150,7 +150,7 @@ WEBDAV_PASSWORD=<OPEN_CLOUD_APP_TOKEN>
 |---|---|---|
 | `SCAN_ROOT_HOST` | `/volume1/docker-ssd/opencloud-ocrmyscan/scan` | Folder on the host that contains the scan-destination subfolders. |
 | `WATCHER_POLL_INTERVAL_SECONDS` | `10` | Internal wait interval in seconds. New files are detected automatically, usually within seconds. |
-| `WATCHER_REPROCESS_INTERVAL_MINUTES` | `0` | Checks existing PDFs again every N minutes. Use this as a retry safety net after temporary problems; `0` disables periodic checks. A daily check (`1440`) is usually sufficient; very short intervals such as `1` minute are not recommended. |
+| `WATCHER_REPROCESS_INTERVAL_MINUTES` | `1440` | Checks existing PDFs again every N minutes. The default is once per 24 hours as a retry safety net after temporary problems; `0` disables periodic checks. Very short intervals such as `1` minute are not recommended. |
 
 ### OCR settings (OCRmyPDF)
 
