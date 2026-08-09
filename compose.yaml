@@ -7,7 +7,8 @@ services:
       - path: ./.env
         required: false
     build:
-      context: ./watcher
+      context: .
+      dockerfile: ./watcher/Dockerfile
       args:
         TESSERACT_PACKAGES: ${TESSERACT_PACKAGES:-tesseract-ocr-deu tesseract-ocr-eng}
     container_name: opencloud-ocrmyscan
@@ -15,20 +16,17 @@ services:
 
     volumes:
       # Central scan root from the NAS
-      - ${SCAN_ROOT_HOST:-/opencloud-ocrmypdf/scan}:/opencloud-ocrmypdf/scan
+      - ${SCAN_ROOT_HOST:-/volume1/docker-ssd/opencloud-ocrmyscan/scan}:/opencloud-ocrmypdf/scan
 
       # temporary processing
-      - ${FOLDER_PROCESS:-/opencloud-ocrmypdf/process}:/opencloud-ocrmypdf/process
+      - ${FOLDER_PROCESS:-/volume1/docker-ssd/opencloud-ocrmyscan/process}:/opencloud-ocrmypdf/process
 
       # Persistent scan-to-WebDAV mappings (mappings.yaml)
-      - ${CONFIG_DIR_HOST:-/opencloud-ocrmypdf/config}:/opencloud-ocrmypdf/config:ro
-
-      # Use the current watcher code checked out by Dockhand. A container restart
-      # applies watcher.py updates without rebuilding the image.
-      - ./watcher/watcher.py:/opencloud-ocrmypdf/watcher.py:ro
+      - ${CONFIG_DIR_HOST:-/volume1/docker-ssd/opencloud-ocrmyscan/config}:/opencloud-ocrmypdf/config:ro
 
     environment:
       TZ: ${TZ:-Europe/Berlin}
+      APP_VERSION: ${APP_VERSION:-0.1.0-beta.1}
 
       # Watcher settings
       # These internal container paths must match the bind mounts above.

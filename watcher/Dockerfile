@@ -2,23 +2,19 @@ FROM python:3.12-slim
 
 ARG TESSERACT_PACKAGES="tesseract-ocr-deu tesseract-ocr-eng"
 
-RUN apt update && apt install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ocrmypdf \
     tesseract-ocr \
     ${TESSERACT_PACKAGES} \
-    curl \
-    inotify-tools \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN pip install \
-    watchdog \
-    requests \
-    pyyaml
+COPY watcher/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 
 WORKDIR /opencloud-ocrmypdf
 
-COPY watcher.py /opencloud-ocrmypdf/watcher.py
+COPY watcher/watcher.py /opencloud-ocrmypdf/watcher.py
+COPY VERSION /opencloud-ocrmypdf/VERSION
 
 CMD ["python3","/opencloud-ocrmypdf/watcher.py"]

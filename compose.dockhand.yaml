@@ -1,0 +1,8 @@
+# Dockhand override for stacks deployed from Git without image builds.
+# Apply together with compose.yaml. This mount makes watcher.py updates active
+# after a container restart or redeploy.
+services:
+  opencloud-ocrmyscan:
+    volumes:
+      - ./watcher/watcher.py:/opencloud-ocrmypdf/watcher.py:ro
+      - ./VERSION:/opencloud-ocrmypdf/VERSION:ro

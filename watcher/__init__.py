@@ -1,0 +1,1 @@
+"""OpenCloud OCR watcher package."""

@@ -1,8 +1,9 @@
 import os
 import re
-import sys
 import time
 import subprocess
+import uuid
+from urllib.parse import quote
 import requests
 import yaml
 
@@ -10,8 +11,21 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 
+def read_app_version():
+    """Read the packaged version, with an environment override for deployments."""
+    configured = os.environ.get("APP_VERSION")
+    if configured:
+        return configured.strip()
+
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "VERSION"), encoding="utf-8") as version_file:
+            return version_file.read().strip() or "unknown"
+    except OSError:
+        return "development"
+
+
+APP_VERSION = read_app_version()
 SCAN_ROOT = os.environ.get("WATCHER_SCAN_ROOT", "/opencloud-ocrmypdf/scan")
-SCAN_ROOTS_ENV = os.environ.get("WATCHER_SCAN_ROOTS", "")
 TMP_ROOT = os.environ.get("WATCHER_TMP_ROOT", "/opencloud-ocrmypdf/process")
 POLL_INTERVAL_SECONDS = int(os.environ.get("WATCHER_POLL_INTERVAL_SECONDS", "10"))
 REPROCESS_INTERVAL_MINUTES = int(os.environ.get("WATCHER_REPROCESS_INTERVAL_MINUTES", "0") or "0")
@@ -40,28 +54,14 @@ def parse_languages():
 OCR_LANGUAGES = parse_languages()
 
 
-def parse_scan_roots():
-    configured = []
-
-    for raw_value in re.split(r"[;,]+", SCAN_ROOTS_ENV):
-        value = raw_value.strip()
-        if value and value not in configured:
-            configured.append(value)
-
-    if SCAN_ROOT and SCAN_ROOT not in configured:
-        configured.insert(0, SCAN_ROOT)
-
-    return configured or ["/opencloud-ocrmypdf/scan"]
-
-
-SCAN_ROOTS = parse_scan_roots()
+SCAN_ROOTS = [SCAN_ROOT]
 MAPPING_CONFIG_FILE = os.environ.get(
     "MAPPING_CONFIG_FILE", "/opencloud-ocrmypdf/config/mappings.yaml"
 )
 
 
 # -------------------------------------------------
-# Konfiguration
+# Configuration
 # -------------------------------------------------
 
 def log(*args):
@@ -111,12 +111,16 @@ else:
 
 WEBDAV_USER = os.environ.get("WEBDAV_USER")
 WEBDAV_PASSWORD = os.environ.get("WEBDAV_PASSWORD")
+WEBDAV_CONFIGURED = bool(WEBDAV_USER and WEBDAV_PASSWORD)
 
 
 log("--------------------------------")
 log("OpenCloud OCR Scanner started")
+log("Version:", APP_VERSION)
 log("Scan roots:", SCAN_ROOTS)
 log("Temp:", TMP_ROOT)
+if not WEBDAV_CONFIGURED:
+    log("ERROR: WEBDAV_USER and WEBDAV_PASSWORD must both be configured")
 for scan_root in SCAN_ROOTS:
     if os.path.exists(scan_root):
         try:
@@ -130,7 +134,7 @@ log("--------------------------------")
 
 
 # -------------------------------------------------
-# Hilfsfunktionen
+# Helpers
 # -------------------------------------------------
 
 def wait_until_file_ready(filename):
@@ -182,6 +186,8 @@ def create_webdav_folder(target):
     """
 
     target_url = build_target_url(target)
+    if not target_url:
+        return False
 
     try:
 
@@ -200,7 +206,7 @@ def create_webdav_folder(target):
             201,  # erstellt
             405   # existiert bereits
         ]:
-            return
+            return True
 
 
         log(
@@ -209,6 +215,7 @@ def create_webdav_folder(target):
             r.status_code,
             r.text
         )
+        return False
 
 
     except Exception as e:
@@ -217,6 +224,7 @@ def create_webdav_folder(target):
             "MKCOL error:",
             repr(e)
         )
+        return False
 
 
 
@@ -225,13 +233,15 @@ def upload_file(filename, target):
     basename = os.path.basename(filename)
 
 
-    create_webdav_folder(
-        target
-    )
+    if not create_webdav_folder(target):
+        log("Upload skipped because the WebDAV target folder could not be prepared")
+        return False
 
 
     target_url = build_target_url(target)
-    url = target_url + "/" + basename
+    if not target_url:
+        return False
+    url = target_url + "/" + quote(basename, safe="")
 
 
     log("")
@@ -289,7 +299,7 @@ def upload_file(filename, target):
 
 
 # -------------------------------------------------
-# Verarbeitung
+# Processing
 # -------------------------------------------------
 
 def normalize_path(path):
@@ -313,6 +323,33 @@ def matches_source_path(current_folder, source_config):
     return normalize_path(source_config) in current_candidates
 
 
+def build_ocr_command(source, output):
+    """Build the OCRmyPDF command from the selected OCR options."""
+    command = ["ocrmypdf", "--language", "+".join(OCR_LANGUAGES), source, output]
+
+    if OCR_DESKEW:
+        command.insert(1, "--deskew")
+    if OCR_ROTATE_PAGES:
+        command.insert(1, "--rotate-pages")
+    if OCR_CLEAN:
+        command.insert(1, "--clean")
+    if OCR_CLEAN_FINAL:
+        command.insert(1, "--clean-final")
+    if OCR_REMOVE_BACKGROUND:
+        log("OCR remove-background is enabled, but OCRmyPDF currently raises NotImplementedError in this environment")
+        command.insert(1, "--remove-background")
+    if OCR_SKIP_TEXT:
+        command.insert(1, "--skip-text")
+    if OCR_REDO_OCR and not any([OCR_DESKEW, OCR_CLEAN, OCR_REMOVE_BACKGROUND]):
+        command.insert(1, "--redo-ocr")
+    elif OCR_REDO_OCR:
+        log("OCR redo-ocr disabled because it is incompatible with deskew/clean/remove-background")
+    if OCR_FORCE_OCR:
+        command.insert(1, "--force-ocr")
+
+    return command
+
+
 def process_file(source):
 
     log("")
@@ -325,6 +362,10 @@ def process_file(source):
     try:
 
         wait_until_file_ready(source)
+
+        if not WEBDAV_CONFIGURED:
+            log("Upload skipped because WebDAV credentials are not configured")
+            return
 
 
         source_folder = os.path.dirname(source)
@@ -339,12 +380,10 @@ def process_file(source):
                 continue
 
             current_folder = os.path.normpath(source_folder)
-            source_match = os.path.normpath(source_config)
-
-            log("Trying mapping:", source_match, "->", target_config)
 
             if matches_source_path(current_folder, source_config):
                 target_url = target_config
+                log("Matched mapping:", source_config, "for scan folder:", source_folder)
                 break
 
         if not target_url:
@@ -366,7 +405,7 @@ def process_file(source):
 
         output = os.path.join(
             TMP_ROOT,
-            os.path.basename(source)
+            f"{uuid.uuid4().hex}-{os.path.basename(source)}"
         )
 
 
@@ -382,46 +421,7 @@ def process_file(source):
             OCR_FORCE_OCR
         ))
 
-        language_option = "+".join(OCR_LANGUAGES)
-
-        command = [
-            "ocrmypdf",
-            "--language",
-            language_option,
-            source,
-            output
-        ]
-
-        if OCR_DESKEW:
-            command.insert(1, "--deskew")
-
-        if OCR_ROTATE_PAGES:
-            command.insert(1, "--rotate-pages")
-
-        if OCR_CLEAN:
-            command.insert(1, "--clean")
-
-        if OCR_CLEAN_FINAL:
-            command.insert(1, "--clean-final")
-
-        if OCR_REMOVE_BACKGROUND:
-            log("OCR remove-background is enabled, but OCRmyPDF currently raises NotImplementedError in this environment")
-            command.insert(1, "--remove-background")
-
-        if OCR_SKIP_TEXT:
-            command.insert(1, "--skip-text")
-
-        if OCR_REDO_OCR and not any([
-            OCR_DESKEW,
-            OCR_CLEAN,
-            OCR_REMOVE_BACKGROUND,
-        ]):
-            command.insert(1, "--redo-ocr")
-        elif OCR_REDO_OCR:
-            log("OCR redo-ocr disabled because it is incompatible with deskew/clean/remove-background")
-
-        if OCR_FORCE_OCR:
-            command.insert(1, "--force-ocr")
+        command = build_ocr_command(source, output)
 
         subprocess.run(
             command,
@@ -520,47 +520,41 @@ class ScannerHandler(
 
 
 
-observer = Observer()
+def main():
+    """Start filesystem monitoring and the optional periodic retry."""
+    observer = Observer()
 
-for scan_root in SCAN_ROOTS:
-    observer.schedule(
-        ScannerHandler(),
-        scan_root,
-        recursive=True
-    )
+    for scan_root in SCAN_ROOTS:
+        if os.path.isdir(scan_root):
+            observer.schedule(ScannerHandler(), scan_root, recursive=True)
 
+    observer.start()
 
-observer.start()
+    existing_pdfs = discover_existing_pdfs(SCAN_ROOTS)
+    if existing_pdfs:
+        log("Starting initial check for existing PDFs")
+        for pdf_path in existing_pdfs:
+            process_file(pdf_path)
 
-existing_pdfs = discover_existing_pdfs(SCAN_ROOTS)
-if existing_pdfs:
-    log("Starting initial check for existing PDFs")
-    for pdf_path in existing_pdfs:
-        process_file(pdf_path)
+    log("Monitoring active")
 
-log(
-    "Monitoring active"
-)
+    try:
+        while True:
+            if REPROCESS_INTERVAL_MINUTES > 0:
+                time.sleep(REPROCESS_INTERVAL_MINUTES * 60)
+                existing_pdfs = discover_existing_pdfs(SCAN_ROOTS)
+                if existing_pdfs:
+                    log("Starting periodic check for existing PDFs")
+                    for pdf_path in existing_pdfs:
+                        process_file(pdf_path)
+                continue
 
+            time.sleep(POLL_INTERVAL_SECONDS)
+    except KeyboardInterrupt:
+        observer.stop()
 
-try:
-
-    while True:
-        if REPROCESS_INTERVAL_MINUTES > 0:
-            time.sleep(REPROCESS_INTERVAL_MINUTES * 60)
-            existing_pdfs = discover_existing_pdfs(SCAN_ROOTS)
-            if existing_pdfs:
-                log("Starting periodic check for existing PDFs")
-                for pdf_path in existing_pdfs:
-                    process_file(pdf_path)
-            continue
-
-        time.sleep(POLL_INTERVAL_SECONDS)
+    observer.join()
 
 
-except KeyboardInterrupt:
-
-    observer.stop()
-
-
-observer.join()
+if __name__ == "__main__":
+    main()
