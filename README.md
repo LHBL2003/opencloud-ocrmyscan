@@ -10,7 +10,7 @@ The service runs on a NAS or any other host that supports Docker. It works espec
 
 1. A scanner (or any other process) saves a PDF in a subfolder of the shared **scan root**. In this example, `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` is the monitored root folder. Its subfolders are individual scan destinations, for different scanners or for several destinations configured on one scanner. `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` is the destination for Daniela's scans.
 2. The container detects the new PDF and waits until the file is fully written.
-3. The folder name is matched to the configured destination in OpenCloud. (SCAN_MAPPING__DANIELA_SOURCE <> SCAN_MAPPING__DANIELA_TARGET)
+3. The folder name is matched to the configured destination in OpenCloud (`mappings.yaml`).
 4. OCRmyPDF improves the scan as configured (for example, straightening or rotating pages), embeds the recognized text, and creates a PDF/A file in a temporary folder such as `/volume1/docker-ssd/opencloud-ocrmypdf/process/`. PDF/A is an archival PDF format intended to keep documents readable for many years.
 5. The processed PDF is uploaded to the matching OpenCloud folder. The folder is created automatically if it does not exist.
 6. After a successful upload, the original and temporary files are deleted. If an upload fails, the original PDF remains in the scan folder.
@@ -57,7 +57,7 @@ Example folder layout on the NAS or host:
    cd opencloud-ocrmyscan
    ```
 
-2. Create the folders configured as `SCAN_ROOT_HOST` and `FOLDER_PROCESS` and make sure Docker can write to them. For example: `/volume1/docker-ssd/opencloud-ocrmypdf/scan/` and `/volume1/docker-ssd/opencloud-ocrmypdf/process/`.
+2. Create the folders configured as `SCAN_ROOT_HOST`, `FOLDER_PROCESS`, and `CONFIG_DIR_HOST`. Make sure Docker can write to the scan and processing folders. For example: `/volume1/docker-ssd/opencloud-ocrmypdf/scan/`, `/volume1/docker-ssd/opencloud-ocrmypdf/process/`, and `/volume1/docker-ssd/opencloud-ocrmyscan/config/`.
 
    If you use a Docker management interface such as Dockhand, clone the repository there instead and open the stack configuration.
 3. Copy the configuration template:
@@ -66,25 +66,27 @@ Example folder layout on the NAS or host:
    cp .env.example .env
    ```
 
-   Open `.env` in a text editor and set the scan root path, processing path, WebDAV credentials, and folder mappings. If you use a Docker management interface such as Dockhand, use `.env.example` as the template for its environment variables instead.
+   Open `.env` in a text editor and set the scan root path, processing path, and WebDAV credentials. If you use a Docker management interface such as Dockhand, enter these values as stack variables instead.
 
-4. Build and start the service:
+4. Create `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml` from the repository's [`config/mappings.yaml.example`](config/mappings.yaml.example) template. Edit its `source` and `target` values for your folders and WebDAV destinations. This is also the recommended configuration method for Dockhand: the Compose file mounts this host folder directly into the container, so no `SCAN_MAPPING__...` environment variables are needed.
+
+5. Build and start the service:
 
    ```bash
    docker compose up -d --build
    ```
 
-5. Check the logs. They should confirm that the scan folder and mappings were found:
+6. Check the logs. They should confirm that the scan folder and mappings were found:
 
    ```bash
    docker compose logs -f opencloud-ocrmyscan
    ```
 
-6. Place a test PDF in a mapped folder, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/test.pdf`. It should be processed and uploaded automatically.
+7. Place a test PDF in a mapped folder, for example `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/test.pdf`. It should be processed and uploaded automatically.
 
 ## Configuration
 
-Most installations only require editing `.env`, which is created from `.env.example` in the quick-start guide. The variable names and their purpose are listed below. In Docker management interfaces such as Dockhand, enter the same values as environment variables for the stack.
+Most installations require editing `.env` and the host-side `mappings.yaml` created from `config/mappings.yaml.example`. The runtime mapping file is kept on the host at `CONFIG_DIR_HOST/mappings.yaml`; by default this is `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml`. In Docker management interfaces such as Dockhand, enter the settings below as stack variables, then edit the mapping file in the mounted host folder.
 
 After changing `TESSERACT_PACKAGES`, rebuild the image with `docker compose up -d --build`. For other settings, run `docker compose up -d` to recreate the container.
 
@@ -100,6 +102,7 @@ After changing `TESSERACT_PACKAGES`, rebuild the image with `docker compose up -
 | Variable | Default | Description |
 |---|---|---|
 | `FOLDER_PROCESS` | `/opencloud-ocrmypdf/process` | Folder on the host for temporary OCR output before upload. |
+| `CONFIG_DIR_HOST` | `/volume1/docker-ssd/opencloud-ocrmyscan/config` | Host folder containing `mappings.yaml`; mounted read-only into the container. |
 
 ### Watcher settings
 
@@ -137,20 +140,22 @@ OCRmyPDF creates PDF/A files by default. Leave the advanced options at their def
 
 ### Folder mapping: scan folder to OpenCloud folder
 
-Each mapping has two variables with the same name: `SCAN_MAPPING__<NAME>_SOURCE` and `SCAN_MAPPING__<NAME>_TARGET`.
+Mappings are configured in `CONFIG_DIR_HOST/mappings.yaml` (by default: `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml`). The file uses a YAML list:
 
-```env
-SCAN_MAPPING__DANIELA_SOURCE=daniela
-SCAN_MAPPING__DANIELA_TARGET=https://opencloud.example.com/dav/Daniela
+```yaml
+mappings:
+  - source: daniela
+    target: "https://opencloud.MyDomain.com/dav/Daniela"
 
-SCAN_MAPPING__DENIS_SOURCE=denis
-SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/Denis
+  - source: denis
+    target: "https://opencloud.MyDomain.com/dav/spaces/<SpaceId>/Denis"
 ```
 
-- `_SOURCE` is the folder name, or a relative subfolder path, below the scan root. For example, `daniela` matches `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/`.
-- `_TARGET` is the complete WebDAV address of the OpenCloud folder. The service creates that folder when necessary.
-- `<NAME>` is only a label that links the two variables. It must be the same for the `_SOURCE` and `_TARGET` pair, but can otherwise be chosen freely.
-- Add as many mappings as needed. PDFs in folders without a mapping stay untouched and are reported in the log.
+- `source` is the folder name, or a relative subfolder path, below the scan root. For example, `daniela` matches `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/`.
+- `target` is the complete WebDAV address of the OpenCloud folder. The service creates that folder when necessary.
+- Add as many list entries as needed. PDFs in folders without a mapping stay untouched and are reported in the log.
+- The mapping file is read when the container starts. Restart the container after editing it.
+- For backwards compatibility, `SCAN_MAPPING__<NAME>_SOURCE` / `SCAN_MAPPING__<NAME>_TARGET` environment variables are only used when no valid YAML mapping exists. New installations should use the YAML file.
 
 ## Docker folder mapping
 
@@ -158,13 +163,14 @@ SCAN_MAPPING__DENIS_TARGET=https://opencloud.example.com/dav/spaces/<SpaceId>/De
 |---|---|---|
 | `/opencloud-ocrmypdf/scan` | Monitored scan root, containing subfolders such as `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/` and `/volume1/docker-ssd/opencloud-ocrmypdf/scan/daniela/denis/`. | `SCAN_ROOT_HOST` |
 | `/opencloud-ocrmypdf/process` | Temporary OCR output before upload. On the NAS / host, e.g. `/volume1/docker-ssd/opencloud-ocrmypdf/process/` | `FOLDER_PROCESS` |
+| `/opencloud-ocrmypdf/config` | Read-only configuration folder containing `mappings.yaml`. | `CONFIG_DIR_HOST` (default: `/volume1/docker-ssd/opencloud-ocrmyscan/config`) |
 
 ## Troubleshooting
 
 - If a PDF is not processed, run `docker compose logs -f opencloud-ocrmyscan`. At startup, the log lists the folders and mappings that were found.
 - If the scan root is missing or was not mounted, the container writes a warning to the log. Check the path in `SCAN_ROOT_HOST` and the Docker folder mapping.
 - If an upload fails, the original PDF remains in the scan folder. It is retried on the next periodic check (when enabled) or after restarting the container.
-- For WebDAV errors, check the OpenCloud address, username, and app token in `.env`.
+- For WebDAV errors, check the OpenCloud address in `mappings.yaml`, plus username and app token in `.env`.
 - To test the WebDAV connection, use a WebDAV client on Windows or macOS with the same HTTPS address, username, and app token. Opening the WebDAV address in Google Chrome can also provide a basic login check: after entering the username and token, a blank page may be shown. This only indicates that authentication may work; use a WebDAV client to verify folder access and uploads.
 
 ## License

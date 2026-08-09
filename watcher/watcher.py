@@ -4,6 +4,7 @@ import sys
 import time
 import subprocess
 import requests
+import yaml
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -54,6 +55,9 @@ def parse_scan_roots():
 
 
 SCAN_ROOTS = parse_scan_roots()
+MAPPING_CONFIG_FILE = os.environ.get(
+    "MAPPING_CONFIG_FILE", "/opencloud-ocrmypdf/config/mappings.yaml"
+)
 
 
 # -------------------------------------------------
@@ -64,7 +68,7 @@ def log(*args):
     print(*args, flush=True)
 
 
-def parse_target_mapping():
+def parse_environment_target_mapping():
     mapping = {}
 
     for key, value in os.environ.items():
@@ -87,7 +91,50 @@ def parse_target_mapping():
     }
 
 
-config = parse_target_mapping()
+def parse_file_target_mapping(filename):
+    """Read mappings from a YAML file and return the same structure as ENV mappings."""
+    if not os.path.isfile(filename):
+        log("Mapping configuration file not found:", filename)
+        return {}
+
+    try:
+        with open(filename, "r", encoding="utf-8") as config_file:
+            data = yaml.safe_load(config_file) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        log("WARNING: Could not read mapping configuration:", filename, repr(exc))
+        return {}
+
+    mappings = data.get("mappings", []) if isinstance(data, dict) else []
+    if not isinstance(mappings, list):
+        log("WARNING: 'mappings' in", filename, "must be a YAML list")
+        return {}
+
+    result = {}
+    for index, mapping in enumerate(mappings, start=1):
+        if not isinstance(mapping, dict):
+            log("WARNING: Ignoring invalid mapping #", index, "in", filename)
+            continue
+
+        source = mapping.get("source")
+        target = mapping.get("target")
+        if not isinstance(source, str) or not source.strip() or not isinstance(target, str) or not target.strip():
+            log("WARNING: Ignoring incomplete mapping #", index, "in", filename)
+            continue
+
+        result[str(index)] = {"source": source.strip(), "target": target.strip()}
+
+    return result
+
+
+config = parse_file_target_mapping(MAPPING_CONFIG_FILE)
+if config:
+    log("Loaded", len(config), "mapping(s) from:", MAPPING_CONFIG_FILE)
+else:
+    config = parse_environment_target_mapping()
+    if config:
+        log("No valid YAML mappings found; using legacy SCAN_MAPPING__ environment variables")
+    else:
+        log("WARNING: No valid scan-to-WebDAV mappings configured")
 
 WEBDAV_USER = os.environ.get("WEBDAV_USER")
 WEBDAV_PASSWORD = os.environ.get("WEBDAV_PASSWORD")

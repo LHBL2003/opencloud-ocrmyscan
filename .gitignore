@@ -1,6 +1,7 @@
 # Local runtime data
 process/*
 scan/*
+config/mappings.yaml
 config/*.bak
 
 # Environment secrets
