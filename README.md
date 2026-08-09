@@ -68,7 +68,7 @@ Example folder layout on the NAS or host:
 
    Open `.env` in a text editor and set the scan root path, processing path, and WebDAV credentials. If you use a Docker management interface such as Dockhand, enter these values as stack variables instead.
 
-4. Create `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml` from the repository's [`config/mappings.yaml.example`](config/mappings.yaml.example) template. Edit its `source` and `target` values for your folders and WebDAV destinations. This is also the recommended configuration method for Dockhand: the Compose file mounts this host folder directly into the container, so no `SCAN_MAPPING__...` environment variables are needed.
+4. Create `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml` from the repository's [`config/mappings.yaml.example`](config/mappings.yaml.example) template. Edit its `source` and `target` values for your folders and WebDAV destinations. The Compose file mounts this host folder directly into the container.
 
 5. Build and start the service:
 
@@ -155,7 +155,6 @@ mappings:
 - `target` is the complete WebDAV address of the OpenCloud folder. The service creates that folder when necessary.
 - Add as many list entries as needed. PDFs in folders without a mapping stay untouched and are reported in the log.
 - The mapping file is read when the container starts. Restart the container after editing it.
-- For backwards compatibility, `SCAN_MAPPING__<NAME>_SOURCE` / `SCAN_MAPPING__<NAME>_TARGET` environment variables are only used when no valid YAML mapping exists. New installations should use the YAML file.
 
 ## Docker folder mapping
 

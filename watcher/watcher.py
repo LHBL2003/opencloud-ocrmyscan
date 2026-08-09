@@ -68,31 +68,8 @@ def log(*args):
     print(*args, flush=True)
 
 
-def parse_environment_target_mapping():
-    mapping = {}
-
-    for key, value in os.environ.items():
-        if not key.startswith("SCAN_MAPPING__") or not value:
-            continue
-
-        if key.endswith("_SOURCE"):
-            name = key[len("SCAN_MAPPING__"): -len("_SOURCE")].strip().lower()
-            if name:
-                mapping.setdefault(name, {})["source"] = value.strip()
-        elif key.endswith("_TARGET"):
-            name = key[len("SCAN_MAPPING__"): -len("_TARGET")].strip().lower()
-            if name:
-                mapping.setdefault(name, {})["target"] = value.strip()
-
-    return {
-        name: cfg
-        for name, cfg in mapping.items()
-        if cfg.get("source") and cfg.get("target")
-    }
-
-
 def parse_file_target_mapping(filename):
-    """Read mappings from a YAML file and return the same structure as ENV mappings."""
+    """Read scan-to-WebDAV mappings from a YAML file."""
     if not os.path.isfile(filename):
         log("Mapping configuration file not found:", filename)
         return {}
@@ -130,11 +107,7 @@ config = parse_file_target_mapping(MAPPING_CONFIG_FILE)
 if config:
     log("Loaded", len(config), "mapping(s) from:", MAPPING_CONFIG_FILE)
 else:
-    config = parse_environment_target_mapping()
-    if config:
-        log("No valid YAML mappings found; using legacy SCAN_MAPPING__ environment variables")
-    else:
-        log("WARNING: No valid scan-to-WebDAV mappings configured")
+    log("WARNING: No valid scan-to-WebDAV mappings configured")
 
 WEBDAV_USER = os.environ.get("WEBDAV_USER")
 WEBDAV_PASSWORD = os.environ.get("WEBDAV_PASSWORD")
