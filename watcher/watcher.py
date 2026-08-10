@@ -3,6 +3,7 @@ import re
 import time
 import subprocess
 import uuid
+from datetime import datetime
 from urllib.parse import quote
 import requests
 import yaml
@@ -212,9 +213,36 @@ def create_webdav_folder(target):
 
 
 
-def upload_file(filename, target):
+def add_timestamp_to_filename(filename, timestamp=None):
+    timestamp = timestamp or datetime.now()
+    stem, extension = os.path.splitext(filename)
+    milliseconds = timestamp.microsecond // 1000
+    return f"{stem}_{timestamp:%Y%m%d-%H%M%S}-{milliseconds:03d}{extension}"
 
-    basename = os.path.basename(filename)
+
+def webdav_file_exists(url):
+    try:
+        response = requests.head(
+            url,
+            auth=(WEBDAV_USER, WEBDAV_PASSWORD),
+            timeout=30,
+        )
+    except Exception as exc:
+        log("WebDAV existence check failed:", repr(exc))
+        return None
+
+    if 200 <= response.status_code < 300:
+        return True
+    if response.status_code == 404:
+        return False
+
+    log("WebDAV existence check returned:", response.status_code, url)
+    return None
+
+
+def upload_file(filename, target, destination_basename=None):
+
+    basename = destination_basename or os.path.basename(filename)
 
 
     if not create_webdav_folder(target):
@@ -226,6 +254,15 @@ def upload_file(filename, target):
     if not target_url:
         return False
     url = target_url + "/" + quote(basename, safe="")
+
+    file_exists = webdav_file_exists(url)
+    if file_exists is None:
+        log("Upload skipped because the destination filename could not be checked")
+        return False
+    if file_exists:
+        basename = add_timestamp_to_filename(basename)
+        url = target_url + "/" + quote(basename, safe="")
+        log("Destination file already exists; using:", basename)
 
 
     log("")
@@ -245,7 +282,8 @@ def upload_file(filename, target):
                 ),
                 data=data,
                 headers={
-                    "Content-Type": "application/pdf"
+                    "Content-Type": "application/pdf",
+                    "If-None-Match": "*",
                 },
                 timeout=120
             )
@@ -435,7 +473,8 @@ def process_file(source):
 
         success = upload_file(
             output,
-            target_url
+            target_url,
+            destination_basename=os.path.basename(source),
         )
 
 

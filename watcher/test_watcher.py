@@ -1,6 +1,8 @@
 import os
 import tempfile
 import unittest
+from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import patch
 
 try:
@@ -68,3 +70,63 @@ class OcrCommandTests(unittest.TestCase):
 
     def test_invalid_webdav_target_is_rejected(self):
         self.assertFalse(app.create_webdav_folder("not-a-url"))
+
+
+class UploadFilenameTests(unittest.TestCase):
+    def test_adds_millisecond_timestamp_before_extension(self):
+        timestamp = datetime(2026, 5, 22, 14, 3, 4, 123456)
+
+        self.assertEqual(
+            app.add_timestamp_to_filename("AnnualQuackAudit.pdf", timestamp),
+            "AnnualQuackAudit_20260522-140304-123.pdf",
+        )
+
+    @patch.object(app, "create_webdav_folder", return_value=True)
+    @patch.object(app, "webdav_file_exists", return_value=False)
+    @patch.object(app.requests, "put")
+    def test_upload_uses_original_scanner_filename_when_available(
+        self, put, _file_exists, _create_folder
+    ):
+        put.return_value = SimpleNamespace(status_code=201, text="")
+
+        with tempfile.TemporaryDirectory() as temp_directory:
+            output = os.path.join(temp_directory, "internal-output.pdf")
+            with open(output, "wb") as output_file:
+                output_file.write(b"test PDF data")
+            success = app.upload_file(
+                output,
+                "https://opencloud.example.test/dav/scans",
+                destination_basename="Annual Quack Audit.pdf",
+            )
+
+        self.assertTrue(success)
+        self.assertEqual(
+            put.call_args.args[0],
+            "https://opencloud.example.test/dav/scans/Annual%20Quack%20Audit.pdf",
+        )
+        self.assertEqual(put.call_args.kwargs["headers"]["If-None-Match"], "*")
+
+    @patch.object(app, "add_timestamp_to_filename", return_value="scan_20260522-140304-123.pdf")
+    @patch.object(app, "create_webdav_folder", return_value=True)
+    @patch.object(app, "webdav_file_exists", return_value=True)
+    @patch.object(app.requests, "put")
+    def test_upload_adds_timestamp_when_filename_exists(
+        self, put, _file_exists, _create_folder, _add_timestamp
+    ):
+        put.return_value = SimpleNamespace(status_code=201, text="")
+
+        with tempfile.TemporaryDirectory() as temp_directory:
+            output = os.path.join(temp_directory, "internal-output.pdf")
+            with open(output, "wb") as output_file:
+                output_file.write(b"test PDF data")
+            success = app.upload_file(
+                output,
+                "https://opencloud.example.test/dav/scans",
+                destination_basename="scan.pdf",
+            )
+
+        self.assertTrue(success)
+        self.assertEqual(
+            put.call_args.args[0],
+            "https://opencloud.example.test/dav/scans/scan_20260522-140304-123.pdf",
+        )

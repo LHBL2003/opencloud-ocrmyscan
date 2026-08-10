@@ -12,6 +12,7 @@ The service runs on a NAS or any other Docker host. Server-side Tesseract OCR ca
 - Creates searchable, selectable PDF/A documents with OCRmyPDF and Tesseract.
 - Straightens pages, corrects page orientation, and cleans scans before text recognition by default.
 - Maps scanner folders to different OpenCloud user folders or spaces.
+- Preserves the scanner's original filename during WebDAV upload and adds a millisecond timestamp only if that name already exists at the destination.
 - Uploads processed documents over WebDAV and creates the final destination folder when needed.
 - Preserves the original scan if processing or upload fails.
 - Processes PDFs already present at startup and can periodically retry files after temporary failures.
@@ -24,7 +25,7 @@ Ready to install it? Go directly to the [Docker quick start](#docker-quick-start
 2. The container detects the new PDF and waits until the file is fully written.
 3. The folder name is matched to the configured destination in OpenCloud (`mappings.yaml`).
 4. OCRmyPDF improves the scan as configured (for example, straightening or rotating pages), embeds the recognized text, and creates a PDF/A file in a temporary folder such as `/volume1/docker-ssd/opencloud-ocrmyscan/process/`. PDF/A is an archival PDF format intended to keep documents readable for many years.
-5. The processed PDF is uploaded to the matching OpenCloud folder (`mappings.yaml`). The folder is created automatically if it does not exist.
+5. The processed PDF is uploaded to the matching OpenCloud folder (`mappings.yaml`) with its original scanner filename. If a file with that name already exists, the service adds a timestamp with milliseconds before the `.pdf` extension instead of overwriting it. For example, `AnnualQuackAudit.pdf` becomes `AnnualQuackAudit_20260522-140304-123.pdf`. The destination folder is created automatically if it does not exist.
 6. After a successful upload, the original and temporary files are deleted. If an upload fails, the original PDF remains in the scan folder.
 7. When the container starts, it also checks for PDFs that were already in the scan folders. An optional periodic check can retry files after a temporary problem.
 
@@ -35,6 +36,7 @@ Ready to install it? Go directly to the [Docker quick start](#docker-quick-start
 |- compose.yaml                  # Standard Docker Compose service
 |- .env.example                  # Configuration template
 |- config/mappings.yaml.example  # Mapping configuration template
+|- docs/images/                  # Screenshots used in this README
 `- watcher/
    |- Dockerfile                 # Container image (Python + OCRmyPDF + Tesseract)
    |- requirements.txt           # Pinned Python dependencies
@@ -62,6 +64,10 @@ Example folder layout on the NAS or host:
 |  `- denis/              # Incoming PDFs for Denis
 `- process/               # Temporary OCR output
 ```
+
+![Windows network share with separate scan destination folders for Daniela and Denis](docs/images/scan-folder-mappings.png)
+
+*Example scan root with one subfolder for each OpenCloud destination mapping.*
 
 ## Docker quick start
 
@@ -106,6 +112,12 @@ Example folder layout on the NAS or host:
    ```bash
    docker compose logs -f opencloud-ocrmyscan
    ```
+
+   A successful startup lists the loaded mappings, mounted scan root, temporary processing folder, and active monitoring status:
+
+   ![OpenCloud OCR Scanner startup log showing loaded mappings and active folder monitoring](docs/images/container-startup-log.png)
+
+   *Example container log after a successful startup.*
 
 7. Place a test PDF in a mapped folder, for example `/volume1/docker-ssd/opencloud-ocrmyscan/scan/daniela/test.pdf`. It should be processed and uploaded automatically.
 
