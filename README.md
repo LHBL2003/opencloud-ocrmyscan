@@ -74,15 +74,24 @@ Example folder layout on the NAS or host:
 
 2. Create the folders configured as `SCAN_ROOT_HOST`, `FOLDER_PROCESS`, and `CONFIG_DIR_HOST`. For example: `/volume1/docker-ssd/opencloud-ocrmyscan/scan/`, `/volume1/docker-ssd/opencloud-ocrmyscan/process/`, and `/volume1/docker-ssd/opencloud-ocrmyscan/config/`. Make sure Docker can write to the scan and processing folders, and can read the configuration folder (it is mounted read-only).
 
-3. Copy the configuration template:
+3. Configure the required environment variables. For Docker Compose, copy the configuration template.<br>
+   ℹ️: If you use Dockhand or other Docker-Management, add the repository with **From Git**, open the stack configuration, and enter the same values as stack variables instead of creating a local `.env` file.
 
    ```bash
    cp .env.example .env
    ```
 
-   Open `.env` in a text editor. At a minimum, set the scan root path, processing path, configuration folder path, and WebDAV credentials.
+   Open `.env` in a text editor and set at least these values:
 
-   If you use a Docker management interface such as Dockhand, add the repository with **From Git**, open the stack configuration, and enter these values as stack variables instead of creating a local `.env` file.
+   ```env
+   FOLDER_PROCESS=/volume1/docker-ssd/opencloud-ocrmyscan/process
+   SCAN_ROOT_HOST=/volume1/docker-ssd/opencloud-ocrmyscan/scan
+   CONFIG_DIR_HOST=/volume1/docker-ssd/opencloud-ocrmyscan/config
+   WEBDAV_USER=ScanUser
+   WEBDAV_PASSWORD=<OPEN_CLOUD_APP_TOKEN>
+   ```
+
+
 
 4. Create `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml` from the repository's [`config/mappings.yaml.example`](config/mappings.yaml.example) template. Edit its `source` and `target` values for your folders and WebDAV destinations. The Compose file mounts this host folder directly into the container.
 
@@ -103,26 +112,6 @@ Example folder layout on the NAS or host:
 ## Configure OCR, scan folders, and WebDAV uploads
 
 The following sections describe all available settings and their defaults or required values.
-
-### Apply updates after a Git sync
-
-`compose.yaml` mounts `watcher/watcher.py` from the checked-out repository into the container. After an update from Git, restarting or redeploying the container is enough to apply Python code changes. This works with Docker Compose and Docker management interfaces such as Dockhand or Komodo.
-
-Changes to the `Dockerfile`, `requirements.txt`, or `TESSERACT_PACKAGES` still require a new image build.
-
-### Configure a minimal Dockhand deployment
-
-For a basic deployment, configure at least these env variables:
-
-```env
-FOLDER_PROCESS=/volume1/docker-ssd/opencloud-ocrmyscan/process
-SCAN_ROOT_HOST=/volume1/docker-ssd/opencloud-ocrmyscan/scan
-CONFIG_DIR_HOST=/volume1/docker-ssd/opencloud-ocrmyscan/config
-WEBDAV_USER=ScanUser
-WEBDAV_PASSWORD=<OPEN_CLOUD_APP_TOKEN>
-```
-
-Then create the separate mapping file at `CONFIG_DIR_HOST/mappings.yaml` from [`config/mappings.yaml.example`](config/mappings.yaml.example).
 
 ### Set the container time zone
 
@@ -171,7 +160,7 @@ See the [OCRmyPDF cookbook](https://ocrmypdf.readthedocs.io/en/latest/cookbook.h
 
 Keep the language settings aligned: every language code in `OCR_LANGUAGES` must have its matching package installed through `TESSERACT_PACKAGES`. For example, add `tesseract-ocr-fra` and `fra` when French OCR is needed. `OCR_LANGUAGES` may be a subset of the installed packages. The available language codes are listed in the official [Tesseract language data](https://github.com/tesseract-ocr/tessdata) repository. After rebuilding the image, verify the installed codes with `docker compose exec opencloud-ocrmyscan tesseract --list-langs`.
 
-OCRmyPDF creates PDF/A files by default. Leave the advanced options at their default values unless you have a specific reason to change them.
+Leave the advanced options at their default values unless you have a specific reason to change them.
 
 ### Configure OpenCloud WebDAV credentials
 
@@ -209,6 +198,16 @@ To find a folder's WebDAV URL in OpenCloud, click the user icon in the top right
 | `/opencloud-ocrmypdf/config` | Read-only configuration folder containing `mappings.yaml`, e.g. `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml`. | `CONFIG_DIR_HOST` (required) |
 
 ## Troubleshoot PDF processing and WebDAV uploads
+
+### Updates are not applied after a Git sync
+
+`compose.yaml` mounts `watcher/watcher.py` from the checked-out repository into the container. After an update from Git, restarting or redeploying the container is enough to apply changes to this Python file. This works with Docker Compose and Docker management interfaces such as Dockhand or Komodo.
+
+Changes to the `Dockerfile`, `requirements.txt`, or `TESSERACT_PACKAGES` require a new image build; restarting the existing container is not enough. If your Docker management interface does not provide a **Build image** action for Git repositories, delete only the existing `opencloud-ocrmyscan` image and deploy the stack again. The manager should then build a new image from the current Git checkout.
+
+Check the image creation date or image ID before starting the container to confirm that the image was regenerated. Also make sure the manager supports building the Compose `build` configuration from the Git repository.
+
+### Other processing and upload problems
 
 - If a PDF is not processed, run `docker compose logs -f opencloud-ocrmyscan`. At startup, the log lists the folders and mappings that were found.
 - If the scan root is missing or was not mounted, the container writes a warning to the log. Check the path in `SCAN_ROOT_HOST` and the Docker folder mapping.
