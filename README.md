@@ -1,12 +1,24 @@
-# OpenCloud OCR Scanner
+# OpenCloud OCR Scanner — Automatic PDF OCR and WebDAV Uploads with Docker
 
-This Docker service watches scan folders for new PDF files, processes them with [OCRmyPDF](https://ocrmypdf.readthedocs.io/) and [Tesseract](https://tesseract-ocr.github.io/), then uploads the result to [OpenCloud](https://opencloud.eu/) through WebDAV. The source subfolder decides which OpenCloud user or space receives the file.
+OpenCloud OCR Scanner is a self-hosted Docker service that automatically turns scanned PDFs into searchable PDF/A documents and uploads them to [OpenCloud](https://opencloud.eu/) through WebDAV. It watches shared scan folders, runs [OCRmyPDF](https://ocrmypdf.readthedocs.io/) with [Tesseract OCR](https://tesseract-ocr.github.io/), and routes each processed document to an OpenCloud user folder or space based on its source subfolder.
 
-OCR recognizes the text in scanned documents and embeds it as a searchable, selectable text layer in the PDF. You can then copy text from the document and search its contents in the Windows or macOS file-share app. OpenCloud's web interface and app can search document contents without an embedded text layer, but desktop file-share clients benefit from the embedded OCR text.
+Use it when a network scanner or multifunction printer saves PDFs to an NFS or SMB share and you want an automatic scanner-to-OpenCloud workflow. The embedded OCR text layer makes text selectable and searchable in desktop file-share clients on Windows and macOS. OpenCloud's web interface and app can search document contents without an embedded text layer, but desktop clients benefit from OCR inside the PDF itself.
 
-The service runs on a NAS or any other host that supports Docker. It works especially well with an NFS- or SMB-capable scanner or multifunction device that saves scans to a shared folder. Server-side Tesseract OCR can provide better text recognition than the scanner itself. The Compose setup is designed for OpenCloud, but may also work with other WebDAV-compatible services.
+The service runs on a NAS or any other Docker host. Server-side Tesseract OCR can provide better text recognition than OCR built into a scanner. The included Docker Compose setup is designed for OpenCloud and may also work with other WebDAV-compatible services.
 
-## How it works
+## Key features
+
+- Automatically detects new PDF scans in shared folders.
+- Creates searchable, selectable PDF/A documents with OCRmyPDF and Tesseract.
+- Straightens pages, corrects page orientation, and cleans scans before text recognition by default.
+- Maps scanner folders to different OpenCloud user folders or spaces.
+- Uploads processed documents over WebDAV and creates the final destination folder when needed.
+- Preserves the original scan if processing or upload fails.
+- Processes PDFs already present at startup and can periodically retry files after temporary failures.
+
+Ready to install it? Go directly to the [Docker quick start](#docker-quick-start).
+
+## How automatic PDF OCR and upload work
 
 1. A scanner (or any other process) saves a PDF in a subfolder of the shared **scan root**. In this example, `/volume1/docker-ssd/opencloud-ocrmyscan/scan/` is the monitored root folder. Its subfolders are individual scan destinations, for different scanners or for several destinations configured on one scanner. `/volume1/docker-ssd/opencloud-ocrmyscan/scan/daniela/` is the destination for Daniela's scans.
 2. The container detects the new PDF and waits until the file is fully written.
@@ -16,7 +28,7 @@ The service runs on a NAS or any other host that supports Docker. It works espec
 6. After a successful upload, the original and temporary files are deleted. If an upload fails, the original PDF remains in the scan folder.
 7. When the container starts, it also checks for PDFs that were already in the scan folders. An optional periodic check can retry files after a temporary problem.
 
-## Project structure
+## Repository structure
 
 ```
 .
@@ -30,9 +42,7 @@ The service runs on a NAS or any other host that supports Docker. It works espec
    `- test_watcher.py             # Automated unit tests
 ```
 
-
-
-## System requirements
+## Requirements for running the OCR service
 
 - Docker and Docker Compose
 - An OpenCloud instance reachable over WebDAV
@@ -53,7 +63,7 @@ Example folder layout on the NAS or host:
 `- process/               # Temporary OCR output
 ```
 
-## Quick start
+## Docker quick start
 
 1. Clone this repository to the NAS or host where Docker runs:
 
@@ -90,17 +100,17 @@ Example folder layout on the NAS or host:
 
 7. Place a test PDF in a mapped folder, for example `/volume1/docker-ssd/opencloud-ocrmyscan/scan/daniela/test.pdf`. It should be processed and uploaded automatically.
 
-## Configuration
+## Configure OCR, scan folders, and WebDAV uploads
 
 The following sections describe all available settings and their defaults or required values.
 
-### Updating after a Git sync
+### Apply updates after a Git sync
 
 `compose.yaml` mounts `watcher/watcher.py` from the checked-out repository into the container. After an update from Git, restarting or redeploying the container is enough to apply Python code changes. This works with Docker Compose and Docker management interfaces such as Dockhand or Komodo.
 
 Changes to the `Dockerfile`, `requirements.txt`, or `TESSERACT_PACKAGES` still require a new image build.
 
-### Minimal Dockhand configuration
+### Configure a minimal Dockhand deployment
 
 For a basic deployment, configure at least these env variables:
 
@@ -114,26 +124,26 @@ WEBDAV_PASSWORD=<OPEN_CLOUD_APP_TOKEN>
 
 Then create the separate mapping file at `CONFIG_DIR_HOST/mappings.yaml` from [`config/mappings.yaml.example`](config/mappings.yaml.example).
 
-### Time zone
+### Set the container time zone
 
 | Variable | Default | Description |
 |---|---|---|
 | `TZ` | `Europe/Berlin` | Time zone used by the container. |
 
 
-### Temporary processing folder
+### Set the temporary processing folder
 
 | Variable | Default | Description |
 |---|---|---|
 | `FOLDER_PROCESS` | Required | Folder on the host for temporary OCR output before upload. Example: `/volume1/docker-ssd/opencloud-ocrmyscan/process`. |
 
-### Mapping configuration folder
+### Set the mapping configuration folder
 
 | Variable | Default | Description |
 |---|---|---|
 | `CONFIG_DIR_HOST` | Required | Host folder containing `mappings.yaml`; mounted read-only into the container. Example: `/volume1/docker-ssd/opencloud-ocrmyscan/config`. |
 
-### Watcher settings
+### Configure scan-folder monitoring and retries
 
 New PDFs are detected event-based. After a file is created, the service waits until its size no longer changes, then processes it automatically. The periodic re-check below is only a safety net for existing PDFs after temporary processing or upload problems.
 
@@ -142,7 +152,7 @@ New PDFs are detected event-based. After a file is created, the service waits un
 | `SCAN_ROOT_HOST` | Required | Folder on the host that contains the scan-destination subfolders. Example: `/volume1/docker-ssd/opencloud-ocrmyscan/scan`. |
 | `WATCHER_SAFETY_RECHECK_INTERVAL_MINUTES` | `1440` | Checks existing PDFs again every N minutes. The default is once per 24 hours as a retry safety net after temporary problems; `0` disables periodic checks. Very short intervals such as `1` minute are not recommended. |
 
-### OCR settings (OCRmyPDF)
+### Configure OCRmyPDF and Tesseract OCR
 
 See the [OCRmyPDF cookbook](https://ocrmypdf.readthedocs.io/en/latest/cookbook.html) for details on each option.
 
@@ -163,14 +173,14 @@ Keep the language settings aligned: every language code in `OCR_LANGUAGES` must 
 
 OCRmyPDF creates PDF/A files by default. Leave the advanced options at their default values unless you have a specific reason to change them.
 
-### WebDAV credentials
+### Configure OpenCloud WebDAV credentials
 
 | Variable | Description |
 |---|---|
 | `WEBDAV_USER` | OpenCloud username used for uploads. |
 | `WEBDAV_PASSWORD` | OpenCloud app token used for uploads. Create it in the user's app-token settings; using a token instead of the normal account password is more secure and the account password often does not work. |
 
-### Folder mapping: scan folder to OpenCloud folder
+### Map scan folders to OpenCloud destinations
 
 Mappings are configured in `CONFIG_DIR_HOST/mappings.yaml`. The file uses a YAML list:
 
@@ -190,7 +200,7 @@ mappings:
 
 To find a folder's WebDAV URL in OpenCloud, click the user icon in the top right, open **Settings** and then **Settings** again, and enable **Show WebDAV information in the detail view**. The WebDAV URL is then shown in the properties/details of each folder.
 
-## Docker folder mapping
+## Docker volume mappings
 
 | Path in the container | Purpose | Setting for the host folder |
 |---|---|---|
@@ -198,7 +208,7 @@ To find a folder's WebDAV URL in OpenCloud, click the user icon in the top right
 | `/opencloud-ocrmypdf/process` | Temporary OCR output before upload. On the NAS / host, e.g. `/volume1/docker-ssd/opencloud-ocrmyscan/process/` | `FOLDER_PROCESS` (required) |
 | `/opencloud-ocrmypdf/config` | Read-only configuration folder containing `mappings.yaml`, e.g. `/volume1/docker-ssd/opencloud-ocrmyscan/config/mappings.yaml`. | `CONFIG_DIR_HOST` (required) |
 
-## Troubleshooting
+## Troubleshoot PDF processing and WebDAV uploads
 
 - If a PDF is not processed, run `docker compose logs -f opencloud-ocrmyscan`. At startup, the log lists the folders and mappings that were found.
 - If the scan root is missing or was not mounted, the container writes a warning to the log. Check the path in `SCAN_ROOT_HOST` and the Docker folder mapping.
