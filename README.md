@@ -29,6 +29,26 @@ Ready to install it? Go directly to the [Docker quick start](#docker-quick-start
 6. After a successful upload, the original and temporary files are deleted. If an upload fails, the original PDF remains in the scan folder.
 7. When the container starts, it also checks for PDFs that were already in the scan folders. An optional periodic check can retry files after a temporary problem.
 
+### Example OCR and WebDAV uploads
+
+#### Small PDF without a filename collision
+
+This one-page example shows the complete path from detecting a new PDF to OCR, PDF/A-2B creation, and WebDAV upload. Because the original filename was not present in the destination, the service uploaded it unchanged as `Unterlagen_010731.pdf`. WebDAV returned `201`, and the source file was deleted only after the successful upload.
+
+![OpenCloud OCR Scanner log for a one-page PDF uploaded with its original filename](docs/images/pdf-upload-log-small.png)
+
+*Successful OCR and WebDAV upload of a small PDF with its original filename.*
+
+#### Larger PDF with a filename collision
+
+This multi-page example also shows Tesseract messages for text-poor or empty pages. These messages do not necessarily abort the complete document. OCRmyPDF still created the expected PDF/A-2B output and WebDAV returned `201`.
+
+The original filename already existed in the destination, so the service appended a millisecond timestamp instead of overwriting the existing file.
+
+![Annotated OpenCloud OCR Scanner log for a larger PDF uploaded with a collision-safe timestamp](docs/images/pdf-upload-log-full.png)
+
+*Successful OCR and WebDAV upload of a larger PDF with a timestamped destination filename.*
+
 ## Repository structure
 
 ```
