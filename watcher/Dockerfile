@@ -5,6 +5,7 @@ ARG TESSERACT_PACKAGES="tesseract-ocr-deu tesseract-ocr-eng"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ocrmypdf \
     tesseract-ocr \
+    unpaper \
     ${TESSERACT_PACKAGES} \
     && rm -rf /var/lib/apt/lists/*
 
