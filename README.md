@@ -6,6 +6,30 @@ Use it when a network scanner or multifunction printer saves PDFs to an NFS or S
 
 The service runs on a NAS or any other Docker host. Server-side Tesseract OCR can provide better text recognition than OCR built into a scanner. The included Docker Compose setup is designed for OpenCloud and may also work with other WebDAV-compatible services.
 
+## Table of Contents
+- [Key Features](#key-features)
+- [How Automatic PDF OCR and Upload Work](#how-automatic-pdf-ocr-and-upload-work)
+  - [Example OCR and WebDAV Uploads](#example-ocr-and-webdav-uploads)
+- [Repository Structure](#repository-structure)
+- [Requirements for Running the OCR Service](#requirements-for-running-the-ocr-service)
+- [Docker Quick Start](#docker-quick-start)
+- [Configure OCR, Scan Folders, and WebDAV Uploads](#configure-ocr-scan-folders-and-webdav-uploads)
+  - [Set the Container Time Zone](#set-the-container-time-zone)
+  - [Set the Temporary Processing Folder](#set-the-temporary-processing-folder)
+  - [Set the Mapping Configuration Folder](#set-the-mapping-configuration-folder)
+  - [Configure Scan-Folder Monitoring and Retries](#configure-scan-folder-monitoring-and-retries)
+  - [Configure OCRmyPDF and Tesseract OCR](#configure-ocrmypdf-and-tesseract-ocr)
+  - [Configure OpenCloud WebDAV Credentials](#configure-opencloud-webdav-credentials)
+  - [Map Scan Folders to OpenCloud Destinations](#map-scan-folders-to-opencloud-destinations)
+- [Docker Volume Mappings](#docker-volume-mappings)
+- [Troubleshoot PDF Processing and WebDAV Uploads](#troubleshoot-pdf-processing-and-webdav-uploads)
+  - [Updates Are Not Applied After a Git Sync](#updates-are-not-applied-after-a-git-sync)
+  - [Other Processing and Upload Problems](#other-processing-and-upload-problems)
+- [Contributing](#contributing)
+- [License](#license)
+  - [Third-Party Licenses](#third-party-licenses)
+
+
 ## Key features
 
 - Automatically detects new PDF scans in shared folders.
