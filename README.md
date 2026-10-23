@@ -1,4 +1,4 @@
-# OpenCloud OCR Scanner — Automatic PDF OCR and WebDAV Uploads with Docker
+# opencloud-ocrmyscan — Automatic PDF OCR and WebDAV Uploads via Docker
 
 OpenCloud OCR Scanner is a self-hosted Docker service that automatically turns scanned PDFs into searchable PDF/A documents and uploads them to [OpenCloud](https://opencloud.eu/) through WebDAV. It watches shared scan folders, runs [OCRmyPDF](https://ocrmypdf.readthedocs.io/) with [Tesseract OCR](https://tesseract-ocr.github.io/), and routes each processed document to an OpenCloud user folder or space based on its source subfolder.
 
